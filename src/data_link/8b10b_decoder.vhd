@@ -7,13 +7,13 @@ entity an8b10b_decoder is
   port (
     ci_char_clk : in  std_logic;        -- The character clock
     ci_reset    : in  std_logic;        -- The reset
-    d_in        : in  std_logic_vector(9 downto 0);  -- The 8b10b encoded input data
+    di_10b        : in  std_logic_vector(9 downto 0);  -- The 8b10b encoded input data
     co_disparity_error    : out std_logic;        -- Whether there is an error
     co_missing_error    : out std_logic;        -- Whether there is an error
     co_error    : out std_logic;        -- Whether there is an error
                                         -- (disparity or invalid character)
     co_kout    : out std_logic;        -- Whether the output is a control character
-    d_out       : out std_logic_vector(7 downto 0));  -- The decoded 8 bit output data
+    do_8b       : out std_logic_vector(7 downto 0));  -- The decoded 8 bit output data
 
 end entity an8b10b_decoder;
 
@@ -40,8 +40,17 @@ architecture a1 of an8b10b_decoder is
     10 => "101", 6 => "110", 1 => "111", 14 => "111",
     8 => "111", 7 => "111",
     others => (others => '0'));  -- Alphabet for decoding 5b6b code
+  constant ctrl_3b4b_alphabet : a3b4b_array := (
+    4 => "000", 9 => "001", 5 => "010",
+    3 => "011", 2 => "100", 10 => "101",
+    6 => "110", 8 => "111",
+    others => (others => '0'));
+  constant ctrl_5b6b_alphabet : a5b6b_array := (
+    15 => "11100", 58 => "10111", 54 => "11011",
+    46 => "11101", 30 => "11110",
+    others => (others => '0'));
 
-  signal reg_d_out : std_logic_vector(7 downto 0) := (others => '0');
+  signal reg_do_8b : std_logic_vector(7 downto 0) := (others => '0');
   signal reg_rd : std_logic := '0';         -- The current running disparity
                                             -- (0 for RD = -1)
 
@@ -51,33 +60,32 @@ architecture a1 of an8b10b_decoder is
   signal next_kout : std_logic := '0';
   signal next_rd : std_logic := '0';
   signal change_rd : std_logic := '0';
-  signal next_d_out_positive : std_logic_vector(7 downto 0) := (others => '0');
-  signal next_d_out_negative : std_logic_vector(7 downto 0) := (others => '0');
-  signal next_d_out : std_logic_vector(7 downto 0) := (others => '0');
+  signal next_do_8b : std_logic_vector(7 downto 0) := (others => '0');
 
-  signal data_4b : std_logic_vector(3 downto 0);
-  signal data_6b : std_logic_vector(5 downto 0);
-  signal data_4b_int : integer;
-  signal data_6b_int : integer;
-  signal data_4b_int_neg : integer;
-  signal data_6b_int_neg : integer;
+  signal data_4b : std_logic_vector(3 downto 0) := "0000";
+  signal data_6b : std_logic_vector(5 downto 0) := "000000";
+  signal data_4b_int : integer := 0;
+  signal data_6b_int : integer := 0;
+  signal data_4b_int_neg : integer := 0;
+  signal data_6b_int_neg : integer := 0;
 
-  signal character_missing_positive : std_logic;
-  signal character_missing_negative : std_logic;
-  -- Either next_d_out_positive for RD = 1 or next_d_out_negative for RD = -1;
-
-  function IsMissingCharacter(data: std_logic_vector(9 downto 0)) return std_logic is
-    variable data_int : integer := to_integer(unsigned(data));
+  function IsMissingCharacter(
+    cdata_4b_int : integer;
+    cdata_6b_int : integer
+  ) return std_logic is
     variable d : std_logic;
   begin
-    if data_int < 5 then
+    if cdata_4b_int = 0 or cdata_4b_int = 15 then
       return '1';
     end if;
-    if data_int > 58 then
+    if cdata_6b_int < 5 then
+      return '1';
+    end if;
+    if cdata_6b_int > 58 then
       return '1';
     end if;
 
-    if data_int = 8 or data_int = 16 or data_int = 47 or data_int = 55 then
+    if cdata_6b_int = 8 or cdata_6b_int = 16 or cdata_6b_int = 47 or cdata_6b_int = 55 then
       return '1';
     end if;
 
@@ -99,32 +107,87 @@ architecture a1 of an8b10b_decoder is
     end if;
     return '0';
   end function;
+
+  function IsDisparityCorrect (
+    cdata_4b : std_logic_vector(3 downto 0);
+    cdata_6b : std_logic_vector(5 downto 0);
+    rd   : std_logic)
+    return std_logic is
+    variable ones_6b : integer := 0;
+    variable ones_4b : integer := 0;
+    variable correct_rd : std_logic;
+  begin  -- function IsDisparityCorrect
+    correct_rd := rd;
+
+    for i in 0 to 5 loop
+      if cdata_6b(i) = '1' then
+        ones_6b := ones_6b + 1;
+      end if;
+
+      if i < 4 and cdata_4b(i) = '1' then
+        ones_4b := ones_4b + 1;
+      end if;
+    end loop;  -- i
+
+    if ones_6b + ones_4b > 6 or ones_6b + ones_4b < 4 then
+      return '0';
+    end if;
+
+    if ones_6b > 3 then
+      correct_rd := '0';
+    elsif ones_6b < 3 then
+      correct_rd := '1';
+    else
+      if ones_4b > 2 then
+        correct_rd := '0';
+      elsif ones_4b < 2 then
+        correct_rd := '1';
+      else
+        if cdata_6b = "000111" then
+          correct_rd := '1';
+        elsif cdata_6b = "111000" then
+          correct_rd := '0';
+        elsif cdata_4b = "0011" then
+          correct_rd := '1';
+        elsif cdata_4b = "1100" then
+          correct_rd := '0';
+        end if;
+      end if;
+    end if;
+
+    if correct_rd = rd then
+      return '1';
+    else
+      return '0';
+    end if;
+  end function IsDisparityCorrect;
+
 begin  -- architecture a1
   -- purpose: Set next states
   -- type   : sequential
   -- inputs : ci_char_clk, ci_reset
-  -- outputs: 
+  -- outputs: co_error, co_disparity_error, co_missing_error, reg_do_8b,
+  -- reg_rd, co_kout
   set_next: process (ci_char_clk, ci_reset) is
   begin  -- process set_next
     if ci_reset = '0' then              -- asynchronous reset (active low)
       co_error <= '0';
       co_disparity_error <= '0';
       co_missing_error <= '0';
-      reg_d_out <= (others => '0');
+      co_kout <= '0';
+      reg_do_8b <= (others => '0');
       reg_rd <= '0';
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
       co_error <= next_error;
       co_disparity_error <= next_disparity_error;
       co_missing_error <= next_missing_error;
-      reg_d_out <= next_d_out;
+      reg_do_8b <= next_do_8b;
       reg_rd <= next_rd;
       co_kout <= next_kout;
     end if;
   end process set_next;
-  character_missing_positive <= IsMissingCharacter(d_in) and not IsControlCharacter(d_in);
-  character_missing_negative <= IsMissingCharacter(not d_in) and not IsControlCharacter(not d_in);
-  data_4b <= d_in(3 downto 0);
-  data_6b <= d_in(9 downto 4);
+  data_4b <= di_10b(3 downto 0);
+  data_6b <= di_10b(9 downto 4);
   data_4b_int <= to_integer(unsigned(data_4b));
   data_6b_int <= to_integer(unsigned(data_6b));
   data_4b_int_neg <= to_integer(unsigned(not data_4b));
@@ -135,26 +198,20 @@ begin  -- architecture a1
   -- will output 1 ... it's basically an odd parity)
   -- synchronize in case of disparity error (can be either at the beginning of
   -- communication or the last character was loaded incorrectly)
-  change_rd <= (xor_reduce(d_in) or next_disparity_error) and not (xor_reduce(d_in) and next_disparity_error);
+  change_rd <= (not xor_reduce(di_10b) or next_disparity_error) and not (not xor_reduce(di_10b) and next_disparity_error);
   next_rd <= (not reg_rd and change_rd) or (reg_rd and not change_rd);
 
   -- control characters
-  next_kout <= IsControlCharacter(d_in);
+  next_kout <= IsControlCharacter(di_10b);
 
   -- errors
-  next_missing_error <= character_missing_positive and character_missing_negative;
-  next_disparity_error <= (reg_rd and character_missing_positive) or (not reg_rd and character_missing_negative);
+  next_missing_error <= IsMissingCharacter(data_4b_int, data_6b_int) and not next_kout;
+  next_disparity_error <= not IsDisparityCorrect(data_4b, data_6b, reg_rd);
   next_error <= next_missing_error or next_disparity_error;
 
-  -- output decoded data
-  next_d_out_positive <= a3b4b_alphabet(data_4b_int) & a5b6b_alphabet(data_6b_int);
-  next_d_out_negative <= a3b4b_alphabet(data_4b_int_neg) & a5b6b_alphabet(data_6b_int_neg);
-
-  -- positive in case of RD = 1, not disparity error, positive in case of RD =
-  -- -1, disparity error. Negative in case RD = -1, not disparity error,
-  -- negative in case RD = 1, disparity error.
-  next_d_out <= next_d_out_positive when (reg_rd = '1' and next_disparity_error = '0') else
-                next_d_out_negative when (reg_rd = '1' or next_disparity_error = '0') else
-                next_d_out_positive;
-  d_out <= reg_d_out;
+  next_do_8b <= a3b4b_alphabet(data_4b_int) & a5b6b_alphabet(data_6b_int) when next_kout = '0' else
+                ctrl_3b4b_alphabet(data_4b_int_neg) & ctrl_5b6b_alphabet(data_6b_int_neg) when (reg_rd = '1' and next_disparity_error = '0') else
+                ctrl_3b4b_alphabet(data_4b_int) & ctrl_5b6b_alphabet(data_6b_int) when (reg_rd = '1' or next_disparity_error = '0') else
+                ctrl_3b4b_alphabet(data_4b_int_neg) & ctrl_5b6b_alphabet(data_6b_int_neg);
+  do_8b <= reg_do_8b;
 end architecture a1;
