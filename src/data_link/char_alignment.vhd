@@ -37,7 +37,7 @@ architecture a1 of char_alignment is
   signal reg_found_sync_char : std_logic := '0';  -- Whether sync char was found
   signal reg_cache_10b : std_logic_vector(19 downto 0) := (others => '0');  -- The cache of 10b characters.
   signal reg_do_10b : std_logic_vector(9 downto 0) := (others => '0');
-  signal reg_alignment_index : integer := 0;  -- Where the character starts in the cache, if aligned.
+  signal reg_alignment_index : integer range 0 to 16 := 0;  -- Where the character starts in the cache, if aligned.
   signal reg_last_synced : std_logic := '0';  -- The last value of ci_synced
   signal reg_co_aligned : std_logic := '0';  -- Whether aligned
 begin  -- architecture a1
