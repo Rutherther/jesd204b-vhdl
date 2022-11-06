@@ -79,17 +79,6 @@ architecture a1 of frame_alignment_tb is
   signal co_octet_index : integer range 0 to 256;
   signal co_frame_index : integer range 0 to 32;
 
-  signal di_d8b : std_logic_vector(7 downto 0);
-  signal di_kout : std_logic;
-  signal di_disparity_error : std_logic;
-  signal di_missing_error : std_logic;
-
-  signal do_d8b : std_logic_vector(7 downto 0);
-  signal do_kout : std_logic;
-  signal do_disparity_error : std_logic;
-  signal do_missing_error : std_logic;
-
-  signal char : character_vector := ('0', '0', '0', "00000000");
   signal test_data_index : integer := 0;
 
 begin  -- architecture a1
@@ -111,16 +100,6 @@ begin  -- architecture a1
 
   clk <= not clk after clk_period/2;
   reset <= '1' after clk_period*2;
-
-  di_d8b <= di_char.d8b;
-  di_kout <= di_char.kout;
-  di_disparity_error <= di_char.disparity_error;
-  di_missing_error <= di_char.missing_error;
-
-  do_d8b <= do_char.d8b;
-  do_kout <= do_char.kout;
-  do_disparity_error <= do_char.disparity_error;
-  do_missing_error <= do_char.missing_error;
 
   test: process is
     variable test_vec : test_vector;

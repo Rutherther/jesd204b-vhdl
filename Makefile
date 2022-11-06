@@ -10,7 +10,7 @@ VHDLEX := vhd
 #                 Top level entity                  #
 #                                                   #
 #####################################################
-export TOP_ENTITY := char_alignment
+export TOP_ENTITY := frame_alignment
 export TOP_ENTITY_VHDL := $(SRCDIR)/$(TOP_ENTITY).$(VHDLEX)
 TESTBENCH ?= $(TOP_ENTITY)_tb # default
 
@@ -20,9 +20,9 @@ COMPILER := ghdl
 COMPILER_FLAGS := --workdir=$(WORKDIR)
 
 STOP_TIME ?= 1000ns
-WAVEFORM_FILE ?= $(SIMDIR)/out.gwh
+WAVEFORM_FILE ?= $(SIMDIR)/out.ghw
 
-RUN_FLAGS := --stop-time=$(STOP_TIME) --vcd=$(WAVEFORM_FILE) --stats
+RUN_FLAGS := --stop-time=$(STOP_TIME) --wave=$(WAVEFORM_FILE) --stats
 
 TBSOURCES := $(wildcard $(TBDIR)/*.$(VHDLEX)) $(wildcard $(TBDIR)/**/*.$(VHDLEX)) 
 export SOURCES := $(wildcard $(TBDIR)/*.$(VHDLEX)) $(wildcard $(SRCDIR)/**/*.$(VHDLEX))
