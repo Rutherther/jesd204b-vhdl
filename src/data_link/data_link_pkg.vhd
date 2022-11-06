@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-package data_link is
+package data_link_pkg is
 
   type character_vector is record
     kout            : std_logic;  -- Whether the character is a control character
@@ -10,4 +10,4 @@ package data_link is
     d8b             : std_logic_vector(7 downto 0);  -- The decoded data
   end record character_vector;
 
-end package data_link;
+end package data_link_pkg;
