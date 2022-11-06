@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use work.testing_functions.all;
+use work.data_link_pkg.all;
 
 entity an8b10bdecoder_tb is
 end entity an8b10bdecoder_tb;
@@ -49,6 +50,7 @@ architecture a1 of an8b10bdecoder_tb is
   signal co_missing_error : std_logic;
   signal co_disparity_error : std_logic;
 
+  signal char : character_vector := ('0', '0', '0', "00000000");
   signal test_data_index : integer := 0;
 begin  -- architecture a1
   uut: entity work.an8b10b_decoder
@@ -56,11 +58,13 @@ begin  -- architecture a1
       ci_char_clk        => clk,
       ci_reset           => reset,
       di_10b             => di_10b,
-      do_8b              => do_8b,
-      co_kout            => co_kout,
-      co_missing_error   => co_missing_error,
-      co_disparity_error => co_disparity_error,
+      do_char            => char,
       co_error           => co_error);
+
+  co_kout <= char.kout;
+  co_missing_error <= char.missing_error;
+  co_disparity_error <= char.disparity_error;
+  do_8b <= char.d8b;
 
   clk <= not clk after clk_period/2;
   reset <= '1' after clk_period*2;
