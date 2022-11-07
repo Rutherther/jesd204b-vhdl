@@ -10,4 +10,11 @@ package data_link_pkg is
     d8b             : std_logic_vector(7 downto 0);  -- The decoded data
   end record character_vector;
 
+  type link_state is (
+    INIT,
+    CGS,
+    ILAS,
+    DATA,
+    ERR);                               -- States of the link
+
 end package data_link_pkg;
