@@ -26,11 +26,11 @@ entity frame_alignment is
 end entity frame_alignment;
 
 architecture a1 of frame_alignment is
-  type alignment_state is (RESET, INIT, ALIGNED, MISALIGNED, WRONG_ALIGNMENT);
+  type alignment_state is (INIT, RECEIVED_K, ALIGNED, MISALIGNED, WRONG_ALIGNMENT);
   -- The states of alignment. MISALIGNED means first alignment error.
   -- WRONG_ALIGNMENT is for second alignment error. won't be set if
   -- ci_enable_realigned is set. Thnen realignment will be processed.
-  signal reg_state : alignment_state := RESET;
+  signal reg_state : alignment_state := INIT;
 
   signal reg_last_frame_data : std_logic_vector(7 downto 0) := "00000000";
 
@@ -55,7 +55,7 @@ begin  -- architecture a1
       reg_frame_index <= 0;
       reg_octet_index <= 0;
       do_char <= ('0', '0', '0', "00000000");
-      reg_state <= RESET;
+      reg_state <= INIT;
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
       do_char <= next_char;
 
@@ -64,14 +64,18 @@ begin  -- architecture a1
         reg_last_frame_data <= di_char.d8b;
       end if;
 
-      if ci_request_sync = '1' or (di_char.kout = '1' and di_char.d8b = sync_char) then
+      if ci_request_sync = '1' then
         reg_state <= INIT;
         reg_frame_index <= 0;
         reg_octet_index <= 0;
-      elsif reg_state = RESET then
+      elsif di_char.kout = '1' and di_char.d8b = sync_char then
+        reg_state <= RECEIVED_K;
         reg_frame_index <= 0;
         reg_octet_index <= 0;
       elsif reg_state = INIT then
+        reg_frame_index <= 0;
+        reg_octet_index <= 0;
+      elsif reg_state = RECEIVED_K then
         reg_frame_index <= 0;
         reg_octet_index <= 0;
 
@@ -103,7 +107,7 @@ begin  -- architecture a1
             reg_frame_index <= ci_F - 1;
           end if;
         end if;
-      end if; -- in INIT
+      end if; -- in RECEIVED_K
     end if; -- clk, reset
   end process set_next;
 
