@@ -116,7 +116,7 @@ begin  -- architecture a1
       co_unexpected_char <= '0';
       co_wrong_chksum <= '0';
 
-      if ci_state /= DATA then
+      if ci_state /= DATA and ci_state /= ILS then
         link_config_data <= (others => '0');
         finished <= '0';
       end if;
