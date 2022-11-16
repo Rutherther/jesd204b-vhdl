@@ -20,9 +20,7 @@ entity frame_alignment is
     di_char           : in  character_vector;       -- The received character
     co_aligned        : out std_logic;
     co_misaligned     : out std_logic;
-    co_octet_index    : out integer range 0 to 256;  -- The index of the octet in current frame
-    co_frame_index    : out integer range 0 to 32;  -- The index of the frame in current multiframe
-    do_char           : out character_vector);      -- The output character
+    do_char           : out frame_character);      -- The output character
 end entity frame_alignment;
 
 architecture a1 of frame_alignment is
@@ -47,17 +45,22 @@ architecture a1 of frame_alignment is
 
   signal next_octet_index : integer range 0 to 256 := 0;
   signal next_frame_index : integer range 0 to 32 := 0;
-  signal next_char : character_vector := ('0', '0', '0', "00000000");
+  signal next_char : character_vector := ('0', '0', '0', "00000000", '0');
 begin  -- architecture a1
   set_next: process (ci_char_clk, ci_reset) is
   begin  -- process set_next
     if ci_reset = '0' then              -- asynchronous reset (active low)
       reg_frame_index <= 0;
       reg_octet_index <= 0;
-      do_char <= ('0', '0', '0', "00000000");
+      do_char <= ('0', '0', '0', "00000000", 0, 0, '0');
       reg_state <= INIT;
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
-      do_char <= next_char;
+      do_char.kout <= next_char.kout;
+      do_char.d8b <= next_char.d8b;
+      do_char.disparity_error <= next_char.disparity_error;
+      do_char.missing_error <= next_char.missing_error;
+      do_char.user_data <= next_char.user_data;
+      do_char.frame_index <= reg_frame_index;
 
       -- set last_frame_data if this is the last frame and not /F/ or /A/
       if next_is_last_octet = '1' and not (is_f = '1' or is_a = '1') then
@@ -68,16 +71,24 @@ begin  -- architecture a1
         reg_state <= INIT;
         reg_frame_index <= 0;
         reg_octet_index <= 0;
+        do_char.octet_index <= 0;
+        do_char.frame_index <= 0;
       elsif di_char.kout = '1' and di_char.d8b = sync_char then
         reg_state <= RECEIVED_K;
         reg_frame_index <= 0;
         reg_octet_index <= 0;
+        do_char.octet_index <= 0;
+        do_char.frame_index <= 0;
       elsif reg_state = INIT then
         reg_frame_index <= 0;
         reg_octet_index <= 0;
+        do_char.octet_index <= 0;
+        do_char.frame_index <= 0;
       elsif reg_state = RECEIVED_K then
         reg_frame_index <= 0;
         reg_octet_index <= 0;
+        do_char.octet_index <= 0;
+        do_char.frame_index <= 0;
 
         if di_char.d8b /= sync_char or di_char.kout = '0' then
           reg_state <= ALIGNED;
@@ -85,6 +96,8 @@ begin  -- architecture a1
       else
         reg_frame_index <= next_frame_index;
         reg_octet_index <= next_octet_index;
+        do_char.octet_index <= next_octet_index;
+        do_char.frame_index <= next_frame_index;
         if reg_state = ALIGNED then
           if is_wrong_char = '1' then
             reg_state <= MISALIGNED;
@@ -94,6 +107,7 @@ begin  -- architecture a1
 
             if ci_enable_realign = '1' then
               reg_octet_index <= ci_F - 1;
+              do_char.octet_index <= ci_F - 1;
             else
               reg_state <= WRONG_ALIGNMENT;
             end if;
@@ -104,7 +118,8 @@ begin  -- architecture a1
           if is_wrong_char = '0' and (is_f = '1' or is_a = '1') then
             reg_state <= MISALIGNED;
           elsif ci_enable_realign = '1' and (is_f = '1' or is_a = '1') then
-            reg_frame_index <= ci_F - 1;
+            do_char.octet_index <= ci_F - 1;
+            reg_octet_index <= ci_F - 1;
           end if;
         end if;
       end if; -- in RECEIVED_K
@@ -119,6 +134,7 @@ begin  -- architecture a1
                  A_replace_data;
   next_char.disparity_error <= di_char.disparity_error;
   next_char.missing_error <= di_char.missing_error;
+  next_char.user_data <= di_char.user_data;
 
   next_is_last_octet <= '1' when next_octet_index = ci_F - 1 else '0';
   next_is_last_frame <= '1' when next_frame_index = ci_K - 1 else '0';
@@ -127,12 +143,9 @@ begin  -- architecture a1
   is_a <= '1' when di_char.d8b = A_char and di_char.kout = '1' else '0';
 
   next_frame_index <= reg_frame_index when reg_octet_index < (ci_F - 1) else
-                      reg_frame_index + 1 when reg_frame_index < (ci_K - 1) else
-                      0;
-  next_octet_index <= reg_octet_index + 1 when reg_octet_index < (ci_F - 1) else 0;
+                      (reg_frame_index + 1) mod ci_K;
+  next_octet_index <= (reg_octet_index + 1) mod ci_F;
 
   co_misaligned <= '1' when reg_state = WRONG_ALIGNMENT else '0';
   co_aligned <= '1' when reg_state = ALIGNED or reg_state = MISALIGNED else '0';
-  co_octet_index <= reg_octet_index;
-  co_frame_index <= reg_frame_index;
 end architecture a1;

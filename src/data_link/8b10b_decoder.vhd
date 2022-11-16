@@ -172,6 +172,7 @@ begin  -- architecture a1
       do_char.disparity_error <= '0';
       do_char.missing_error <= '0';
       do_char.kout <= '0';
+      do_char.user_data <= '0';
       reg_do_8b <= (others => '0');
       reg_rd <= '0';
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
@@ -179,6 +180,7 @@ begin  -- architecture a1
       do_char.disparity_error <= next_disparity_error;
       do_char.missing_error <= next_missing_error;
       do_char.kout <= next_kout;
+      do_char.user_data <= '0';
       reg_do_8b <= next_do_8b;
       reg_rd <= next_rd;
     end if;

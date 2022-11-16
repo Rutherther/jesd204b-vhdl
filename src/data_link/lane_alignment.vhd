@@ -6,7 +6,7 @@ entity lane_alignment is
   generic (
     buffer_size     : integer          := 256;
     alignment_character : std_logic_vector(7 downto 0) := "01111100";
-    dummy_character : character_vector := ('1', '0', '0', "10111100"));
+    dummy_character : character_vector := ('1', '0', '0', "10111100", '0'));
 
   port (
     ci_char_clk : in std_logic;
@@ -25,7 +25,7 @@ end entity lane_alignment;
 
 architecture a1 of lane_alignment is
   type buffer_array is array (0 to buffer_size) of character_vector;
-  signal buff : buffer_array := (others => ('0', '0', '0', "00000000"));
+  signal buff : buffer_array := (others => ('0', '0', '0', "00000000", '0'));
 
   signal reg_ready : std_logic := '0';
   signal reg_started : std_logic := '0';
@@ -48,7 +48,7 @@ begin  -- architecture a1
       reg_ready       <= '0';
       reg_started     <= '0';
       reg_error       <= '0';
-      buff            <= (others => ('0', '0', '0', "00000000"));
+      buff            <= (others => ('0', '0', '0', "00000000", '0'));
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
       reg_write_index       <= next_write_index;
       reg_read_index        <= next_read_index;
@@ -69,7 +69,7 @@ begin  -- architecture a1
                      0;
 
   next_ready <= '0' when ci_state = INIT else
-                '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = alignment_character and (ci_state = CGS or ci_state = ILAS)) else
+                '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = alignment_character and (ci_state = CGS or ci_state = ILS)) else
                 '0';
   next_started <= '0' when reg_ready = '0' else
                   '1' when reg_ready = '1' and (ci_start = '1' or reg_started = '1') else
@@ -82,5 +82,6 @@ begin  -- architecture a1
 
   do_char <= dummy_character when ci_state = INIT or reg_started = '0' else
              buff(reg_read_index);
+  do_char.user_data <= '1' when ci_state = DATA and reg_started = '1' else '0';
 
 end architecture a1;
