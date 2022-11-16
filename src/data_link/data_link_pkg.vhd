@@ -13,9 +13,8 @@ package data_link_pkg is
   type link_state is (
     INIT,
     CGS,
-    ILAS,
-    DATA,
-    ERR);                               -- States of the link
+    ILS,
+    DATA);                               -- States of the link
 
   type link_config is record
     ADJCNT    : integer range 0 to 15;  -- Number of adjustment resolution steps to adjust DAC LMFC
