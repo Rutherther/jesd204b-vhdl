@@ -5,6 +5,7 @@ use ieee.numeric_std.all;
 
 entity ilas_parser is
   generic (
+    K_character  : std_logic_vector(7 downto 0) := "10111100";
     R_character  : std_logic_vector(7 downto 0) := "00011100";
     A_character  : std_logic_vector(7 downto 0) := "01111100";
     Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- 9C
@@ -164,12 +165,14 @@ begin  -- architecture a1
   end process check_chars;
 
   co_finished <= finished;
-  co_error <= err;
+  co_error <= '1' when err = '1' and ci_state = ILS else '0';
 
   next_processing_ilas <= '0' when ci_state = INIT or finished = '1' else
+                          '0' when ci_state = CGS and reg_processing_ilas = '1' else
                           '0' when reg_multiframe_index = 3 and reg_octet_index = octets_in_multiframe - 1 else
-                          '1' when reg_processing_ilas = '1' or ci_state = ILAS
-                          else '0';
+                          '1' when ci_state = CGS and not (di_char.d8b = K_character and di_char.kout = '1') else
+                          '1' when reg_processing_ilas = '1' or ci_state = ILS else
+                          '0';
 
   -- octet, multiframe index
   next_multiframe_index <= 0 when reg_processing_ilas = '0' and next_processing_ilas = '0' else
