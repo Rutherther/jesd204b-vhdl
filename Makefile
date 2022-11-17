@@ -25,7 +25,7 @@ WAVEFORM_FILE ?= $(SIMDIR)/out.ghw
 RUN_FLAGS := --stop-time=$(STOP_TIME) --wave=$(WAVEFORM_FILE) --stats
 
 TBSOURCES := $(wildcard $(TBDIR)/*.$(VHDLEX)) $(wildcard $(TBDIR)/**/*.$(VHDLEX)) 
-export SOURCES := $(wildcard $(TBDIR)/*.$(VHDLEX)) $(wildcard $(SRCDIR)/**/*.$(VHDLEX))
+export SOURCES := $(wildcard $(SRCDIR)/*.$(VHDLEX)) $(wildcard $(SRCDIR)/**/*.$(VHDLEX))
 ALL_SOURCES := $(SOURCES) $(TBSOURCES)
 
 EXECUTABLE := $(SIMDIR)/$(TESTBENCH)
