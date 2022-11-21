@@ -10,24 +10,22 @@ entity frame_alignment is
     F_replace_data : std_logic_vector(7 downto 0) := "11111100";  -- The character to replace with upon receiving /F/ with scrambled data
     A_replace_data : std_logic_vector(7 downto 0) := "01111100");  -- The character to replace with upon receiving /A/ with scrambled data
   port (
-    ci_char_clk       : in  std_logic;
-    ci_reset          : in  std_logic;
-    ci_F              : in  integer range 0 to 256;  -- The number of octets in a frame
-    ci_K              : in  integer range 0 to 32;  -- The number of frames in a multiframe
-    ci_request_sync   : in std_logic;   -- Whether sync is requested
-    ci_scrambled      : in  std_logic;  -- Whether the data is scrambled
-    ci_enable_realign : in  std_logic;  -- Whether to enable automatic realignment
-    di_char           : in  character_vector;       -- The received character
-    co_aligned        : out std_logic;
-    co_misaligned     : out std_logic;
-    do_char           : out frame_character);      -- The output character
+    ci_char_clk           : in  std_logic;
+    ci_reset              : in  std_logic;
+    ci_F                  : in  integer range 0 to 256;  -- The number of octets in a frame
+    ci_K                  : in  integer range 0 to 32;  -- The number of frames in a multiframe
+    ci_request_sync       : in  std_logic;  -- Whether sync is requested
+    ci_scrambled          : in  std_logic;  -- Whether the data is scrambled
+    ci_realign            : in  std_logic;
+    di_char               : in  character_vector;  -- The received character
+    co_aligned            : out std_logic;
+    co_error              : out std_logic;
+    co_correct_sync_chars : out integer;
+    do_char               : out frame_character);  -- The output character
 end entity frame_alignment;
 
 architecture a1 of frame_alignment is
-  type alignment_state is (INIT, RECEIVED_K, ALIGNED, MISALIGNED, WRONG_ALIGNMENT);
-  -- The states of alignment. MISALIGNED means first alignment error.
-  -- WRONG_ALIGNMENT is for second alignment error. won't be set if
-  -- ci_enable_realigned is set. Thnen realignment will be processed.
+  type alignment_state is (INIT, RECEIVED_K, ALIGNED, MISALIGNED);
   signal reg_state : alignment_state := INIT;
 
   signal reg_last_frame_data : std_logic_vector(7 downto 0) := "00000000";
@@ -42,6 +40,8 @@ architecture a1 of frame_alignment is
 
   signal reg_octet_index : integer range 0 to 256 := 0;
   signal reg_frame_index : integer range 0 to 32 := 0;
+  signal reg_correct_sync_chars : integer := 0;
+  signal reg_known_sync_char_position : integer range 0 to 256;
 
   signal next_octet_index : integer range 0 to 256 := 0;
   signal next_frame_index : integer range 0 to 32 := 0;
@@ -54,6 +54,7 @@ begin  -- architecture a1
       reg_octet_index <= 0;
       do_char <= ('0', '0', '0', "00000000", 0, 0, '0');
       reg_state <= INIT;
+      reg_correct_sync_chars <= 0;
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
       do_char.kout <= next_char.kout;
       do_char.d8b <= next_char.d8b;
@@ -101,25 +102,28 @@ begin  -- architecture a1
         if reg_state = ALIGNED then
           if is_wrong_char = '1' then
             reg_state <= MISALIGNED;
+            reg_correct_sync_chars <= 1;
+            reg_known_sync_char_position <= reg_octet_index;
           end if;
         elsif reg_state = MISALIGNED then
           if is_wrong_char = '1' then
-
-            if ci_enable_realign = '1' then
-              reg_octet_index <= ci_F - 1;
-              do_char.octet_index <= ci_F - 1;
+            if reg_known_sync_char_position = reg_octet_index then
+              reg_correct_sync_chars <= reg_correct_sync_chars + 1;
             else
-              reg_state <= WRONG_ALIGNMENT;
+              reg_known_sync_char_position <= reg_octet_index;
+              reg_correct_sync_chars <= 1;
             end if;
           elsif is_wrong_char = '0' and (is_f = '1' or is_a = '1') then
+            reg_correct_sync_chars <= 0;
             reg_state <= ALIGNED;
-          end if;
-        elsif reg_state = WRONG_ALIGNMENT then
-          if is_wrong_char = '0' and (is_f = '1' or is_a = '1') then
-            reg_state <= MISALIGNED;
-          elsif ci_enable_realign = '1' and (is_f = '1' or is_a = '1') then
-            do_char.octet_index <= ci_F - 1;
-            reg_octet_index <= ci_F - 1;
+          elsif ci_realign = '1' then
+            reg_correct_sync_chars <= 0;
+            reg_octet_index <= (reg_octet_index + ((ci_F - 1) - reg_known_sync_char_position)) mod ci_F;
+            do_char.octet_index <= (reg_octet_index + ((ci_F - 1) - reg_known_sync_char_position)) mod ci_F;
+
+            reg_frame_index <= reg_frame_index + 1;
+            do_char.frame_index <= reg_frame_index + 1;
+            reg_state <= ALIGNED;
           end if;
         end if;
       end if; -- in RECEIVED_K
@@ -146,6 +150,7 @@ begin  -- architecture a1
                       (reg_frame_index + 1) mod ci_K;
   next_octet_index <= (reg_octet_index + 1) mod ci_F;
 
-  co_misaligned <= '1' when reg_state = WRONG_ALIGNMENT else '0';
-  co_aligned <= '1' when reg_state = ALIGNED or reg_state = MISALIGNED else '0';
+  co_correct_sync_chars <= reg_correct_sync_chars;
+  co_error <= '1' when reg_state = MISALIGNED else '0';
+  co_aligned <= '1' when reg_state = ALIGNED else '0';
 end architecture a1;
