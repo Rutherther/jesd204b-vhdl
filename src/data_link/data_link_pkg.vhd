@@ -53,4 +53,20 @@ package data_link_pkg is
     CHKSUM    : integer range 0 to 255;
   end record link_config;
 
+  type error_handling_config is record
+    lane_alignment_realign_after  : integer;  -- realign after correctly
+                                              -- received X alignment
+                                              -- characters (0 to disable)
+    frame_alignment_realign_after : integer;  -- realign after correctly
+                                              -- received X alignment
+                                              -- characters (0 to disable)
+    tolerate_missing_in_frame     : integer;  -- How many missing errors to
+                                              -- tolerate in a frame (0 to disable)
+    tolerate_disparity_in_frame   : integer;  -- How many disparity errors to
+                                              -- tolerate in a frame (0 to disable)
+    tolerate_unexpected_characters_in_frame : integer;  -- How many unexpected
+                                                        -- characters to
+                                                        -- tolerate in a frame
+  end record error_handling_config;
+
 end package data_link_pkg;
