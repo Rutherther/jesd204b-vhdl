@@ -78,8 +78,8 @@ begin  -- architecture a1
                   '0';
   co_aligned <= reg_started;            -- TODO: check for misalignment
   next_error <= '0' when ci_state = INIT else
-                '1' when reg_ready = '1' and reg_started = '0' and (reg_write_index = 0) else
                 '1' when reg_error = '1' else
+                '1' when reg_ready = '1' and reg_started = '0' and (reg_write_index = 0) else
                 '0';
 
   do_char <= dummy_character when ci_state = INIT or reg_started = '0' else
