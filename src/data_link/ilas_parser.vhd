@@ -125,25 +125,25 @@ begin  -- architecture a1
       -- If there is an error, stop processing.
     elsif ci_char_clk'event and ci_char_clk = '1' and processing_ilas = '1' then  -- rising clock edge
       if reg_octet_index = 0 then       -- Should be /R/
-        if di_char.d8b /= R_character then
+        if di_char.d8b /= R_character or di_char.kout = '0' then
           err <= '1';
           co_unexpected_char <= '1';
         end if;
-      elsif di_char.d8b = R_character then
+      elsif di_char.d8b = R_character and di_char.kout = '1' then
         err <= '1';
         co_unexpected_char <= '1';
       elsif reg_octet_index = octets_in_multiframe - 1 then
-        if di_char.d8b /= A_character then  -- Should be /A/
+        if di_char.d8b /= A_character or di_char.kout = '0' then  -- Should be /A/
           err <= '1';
           co_unexpected_char <= '1';
         elsif reg_multiframe_index = 3 and err = '0' then
           finished <= '1';
         end if;
-      elsif di_char.d8b = A_character then
+      elsif di_char.d8b = A_character and di_char.kout = '1' then
         err <= '1';
         co_unexpected_char <= '1';
       elsif reg_multiframe_index = 1 then
-        if reg_octet_index = 1 and di_char.d8b /= Q_character then  -- Should be /Q/
+        if reg_octet_index = 1 and (di_char.d8b /= Q_character or di_char.kout = '0') then  -- Should be /Q/
           err <= '1';
           co_unexpected_char <= '1';
         elsif reg_octet_index > 1 and reg_octet_index < 16 then    -- This is config data
