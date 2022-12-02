@@ -119,17 +119,19 @@ begin  -- architecture a1
       do_char      => decoder_do_char);
 
   -- lane alignment
-  lane_alignment: entity work.lane_alignment
+  lane_alignment : entity work.lane_alignment
     port map (
-      ci_char_clk => ci_char_clk,
-      ci_reset    => ci_reset,
-      ci_F        => ci_F,
-      ci_K        => ci_K,
-      ci_state    => link_controller_co_state,
-      co_ready    => lane_alignment_co_ready,
-      ci_start    => ci_lane_start,
-      di_char     => decoder_do_char,
-      do_char     => lane_alignment_do_char);
+      ci_char_clk           => ci_char_clk,
+      ci_reset              => ci_reset,
+      ci_F                  => ci_F,
+      ci_K                  => ci_K,
+      ci_state              => link_controller_co_state,
+      ci_realign            => lane_alignment_ci_realign,
+      co_ready              => lane_alignment_co_ready,
+      ci_start              => ci_lane_start,
+      di_char               => decoder_do_char,
+      co_correct_sync_chars => lane_alignment_co_correct_sync_chars,
+      do_char               => lane_alignment_do_char);
 
   -- frame alignment
   frame_alignment : entity work.frame_alignment

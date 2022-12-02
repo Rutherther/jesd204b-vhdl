@@ -9,17 +9,19 @@ entity lane_alignment is
     dummy_character : character_vector := ('1', '0', '0', "10111100", '0'));
 
   port (
-    ci_char_clk : in std_logic;
-    ci_reset    : in std_logic;
-    ci_start    : in std_logic;
-    ci_state    : in link_state;
-    ci_F        : in integer range 0 to 256;
-    ci_K        : in integer range 0 to 32;
-    di_char     : in character_vector;
-    co_ready    : out std_logic;
-    co_aligned  : out std_logic;
-    co_error    : out std_logic;
-    do_char     : out character_vector);
+    ci_char_clk           : in  std_logic;
+    ci_reset              : in  std_logic;
+    ci_start              : in  std_logic;
+    ci_state              : in  link_state;
+    ci_realign            : in  std_logic;
+    ci_F                  : in  integer range 0 to 256;
+    ci_K                  : in  integer range 0 to 32;
+    di_char               : in  character_vector;
+    co_ready              : out std_logic;
+    co_aligned            : out std_logic;
+    co_correct_sync_chars : out integer;
+    co_error              : out std_logic;
+    do_char               : out character_vector);
 
 end entity lane_alignment;
 
