@@ -10,28 +10,29 @@ entity jesd204b_rx is
     R_character  : std_logic_vector(7 downto 0) := "00011100";
     A_character  : std_logic_vector(7 downto 0) := "01111100";
     Q_character  : std_logic_vector(7 downto 0) := "10011100";
-    M : integer := 1;                   -- Count of converters
-    S : integer := 1;                   -- Count of samples
-    L : integer := 1;                  -- Count of lanes
-    F : integer := 1;
-    K : integer := 1;
-    CF : integer := 1;
-    N : integer := 16;
-    Nn : integer := 16;
-    ERROR_CONFIG : error_handling_config := (2, 0, 5, 5, 5);
-    SCRAMBLING : std_logic := '0');
+    K            : integer                      := 1;
+    CS           : integer                      := 1;  -- Number of control bits per sample
+    M            : integer                      := 1;  -- Number of converters
+    S            : integer                      := 1;  -- Number of samples
+    L            : integer                      := 1;  -- Number of lanes
+    F            : integer                      := 2;  -- Number of octets in a frame
+    CF           : integer                      := 0;  -- Number of control words
+    N            : integer                      := 12;  -- Size of a sample
+    Nn           : integer                      := 16;  -- Size of a word (sample + ctrl if CF
+    ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);
+    SCRAMBLING   : std_logic                    := '0');
   port (
-    ci_char_clk : in std_logic;
+    ci_char_clk  : in std_logic;
     ci_frame_clk : in std_logic;
-    ci_reset : in std_logic;
+    ci_reset     : in std_logic;
 
     co_lane_config : out link_config;
-    co_nsynced : out std_logic;
-    co_error : out std_logic;
+    co_nsynced     : out std_logic;
+    co_error       : out std_logic;
 
-    di_transceiver_data : in lane_input_array(L-1 downto 0);
-    do_samples : out samples_array(M - 1 downto 0, S - 1 downto 0);
-    co_correct_data : out std_logic);
+    di_transceiver_data : in  lane_input_array(L-1 downto 0);
+    do_samples          : out samples_array(M - 1 downto 0, S - 1 downto 0);
+    co_correct_data     : out std_logic);
 end entity jesd204b_rx;
 
 architecture a1 of jesd204b_rx is
@@ -113,18 +114,21 @@ begin  -- architecture a1
     end generate scrambler_gen;
   end generate data_links;
 
-  transport_layer: entity work.transport_layer
+  transport_layer : entity work.transport_layer
     generic map (
-      M => M,
-      S => S,
-      L => L)
+      CS => CS,
+      M  => M,
+      S  => S,
+      L  => L,
+      F  => F,
+      CF => CF,
+      N  => N,
+      Nn => Nn)
     port map (
       ci_char_clk     => ci_char_clk,
       ci_frame_clk    => ci_frame_clk,
       ci_reset        => ci_reset,
       di_lanes_data   => transport_chars_array,
-      ci_N            => N,
-      ci_Nn           => Nn,
       co_correct_data => co_correct_data,
       do_samples_data => do_samples);
 

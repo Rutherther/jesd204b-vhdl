@@ -5,37 +5,43 @@ use work.transport_pkg.all;
 
 entity transport_layer is
   generic (
-    M : integer := 1;                   -- Count of converters
-    S : integer := 1;                   -- Count of samples
-    L : integer := 1);                  -- Count of lanes
+    CS : integer := 1;                  -- Number of control bits per sample
+    M : integer := 1;                   -- Number of converters
+    S : integer := 1;                   -- Number of samples
+    L : integer := 1;                   -- Number of lanes
+    F : integer := 2;                  -- Number of octets in a frame
+    CF : integer := 0;                  -- Number of control words
+    N : integer := 12;                  -- Size of a sample
+    Nn : integer := 16);                 -- Size of a word (sample + ctrl if CF
+                                         -- =0
   port (
     ci_char_clk : in std_logic;
     ci_frame_clk : in std_logic;
     ci_reset : in std_logic;
-    di_lanes_data : in frame_character_array(L - 1 downto 0);
+    di_lanes_data : in frame_character_array(0 to L - 1);
 
-    ci_N : in integer range 0 to 256;   -- Number of bits per sample
-    ci_Nn : in integer range 0 to 256;  -- Number of bits per sample + control
-                                        -- bits
     co_correct_data : out std_logic;
-    do_samples_data : out samples_array(M - 1 downto 0, S - 1 downto 0));
+    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));
 end entity transport_layer;
 
 architecture a1 of transport_layer is
-
 begin  -- architecture a1
 
   octets_to_samples: entity work.octets_to_samples
     generic map (
+      CS => CS,
       M => M,
       S => S,
-      L => L)
+      L => L,
+      F => F,
+      CF => CF,
+      N => N,
+      Nn => Nn)
     port map (
       ci_char_clk     => ci_char_clk,
       ci_frame_clk    => ci_frame_clk,
+      ci_reset        => ci_reset,
       di_lanes_data   => di_lanes_data,
-      ci_N            => ci_N,
-      ci_Nn           => ci_Nn,
       co_correct_data => co_correct_data,
       do_samples_data => do_samples_data);
 
