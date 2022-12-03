@@ -87,7 +87,7 @@ begin  -- architecture a
   new_frame <= '1' when di_lanes_data(0).octet_index = F - 1 else '0';
 
   last_octet_data: for i in 0 to L-1 generate
-    current_buffered_data(L*F*8 - 1 - i*F - (F - 1)*8 downto L*F*8 - 1 - i*F - (F - 1)*8 - 7) <= di_lanes_data(L - 1).d8b;
+    current_buffered_data(L*F*8 - 1 - i*F*8 - (F - 1)*8 downto L*F*8 - 1 - i*F*8 - (F - 1)*8 - 7) <= di_lanes_data(i).d8b;
   end generate last_octet_data;
 
   buffered_data <= current_buffered_data or reg_buffered_data;
