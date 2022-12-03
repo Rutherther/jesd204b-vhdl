@@ -5,8 +5,8 @@ use work.data_link_pkg.all;
 package transport_pkg is
 
   type sample is record
-    data      : std_logic_vector;--(SAMPLE_SIZE - 1 downto 0);
-    ctrl_bits : std_logic_vector;--(CONTROL_SIZE - 1 downto 0);
+    data      : std_logic_vector;
+    ctrl_bits : std_logic_vector;
   end record sample;
 
   type frame_character_array is array (natural range <>) of frame_character;
