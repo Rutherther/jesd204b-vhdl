@@ -84,6 +84,6 @@ begin  -- architecture a1
 
   do_char <= dummy_character when ci_state = INIT or reg_started = '0' else
              buff(reg_read_index);
-  do_char.user_data <= '1' when ci_state = DATA and reg_started = '1' else '0';
+  -- TODO do_char.user_data <= '1' when ci_state = DATA and reg_started = '1' else '0';
 
 end architecture a1;

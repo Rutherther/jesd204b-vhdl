@@ -89,13 +89,14 @@ begin  -- architecture a1
         K_character => K_character,
         R_character => R_character,
         A_character => A_character,
-        Q_character => Q_character)
+        Q_character => Q_character,
+        ERROR_CONFIG => ERROR_CONFIG,
+        SCRAMBLING => SCRAMBLING,
+        F => F,
+        K => K)
       port map (
         ci_char_clk     => ci_char_clk,
         ci_reset        => ci_reset,
-        ci_F            => F,
-        ci_K            => K,
-        ci_scrambled    => SCRAMBLING,
         do_lane_config  => lane_configuration_array(i),
         co_lane_ready   => data_link_ready_vector(i),
         ci_lane_start   => data_link_start,

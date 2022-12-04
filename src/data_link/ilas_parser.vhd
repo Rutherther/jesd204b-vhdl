@@ -102,7 +102,7 @@ begin  -- architecture a1
   end process set_next;
 
   check_chars: process (ci_char_clk, ci_reset) is
-    variable up_index : integer;
+    variable up_index : integer range 7 to link_config_length-1;
     variable processing_ilas : std_logic;
   begin  -- process check_chars
     processing_ilas := next_processing_ilas or reg_processing_ilas;
@@ -121,7 +121,12 @@ begin  -- architecture a1
         link_config_data <= (others => '0');
         finished <= '0';
       end if;
-    elsif err = '1' then
+    elsif ci_char_clk'event and ci_char_clk = '1' and err = '1' then
+      if next_processing_ilas = '0' then
+        err <= '0';
+        co_unexpected_char <= '0';
+        co_wrong_chksum <= '0';
+      end if;
       -- If there is an error, stop processing.
     elsif ci_char_clk'event and ci_char_clk = '1' and processing_ilas = '1' then  -- rising clock edge
       if reg_octet_index = 0 then       -- Should be /R/
@@ -178,7 +183,7 @@ begin  -- architecture a1
   next_multiframe_index <= 0 when reg_processing_ilas = '0' and next_processing_ilas = '0' else
                            (reg_multiframe_index + 1) when reg_octet_index = octets_in_multiframe - 1 else
                            reg_multiframe_index;
-  next_octet_index <= 0 when next_processing_ilas = '0' and reg_processing_ilas = '0' else
+  next_octet_index <= 0 when (next_processing_ilas = '0' and reg_processing_ilas = '0') or (next_processing_ilas = '0' and reg_processing_ilas = '1') else
                       (reg_octet_index + 1) mod octets_in_multiframe;
 
   -- config

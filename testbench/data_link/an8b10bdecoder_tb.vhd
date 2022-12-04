@@ -50,7 +50,7 @@ architecture a1 of an8b10bdecoder_tb is
   signal co_missing_error : std_logic;
   signal co_disparity_error : std_logic;
 
-  signal char : character_vector := ('0', '0', '0', "00000000");
+  signal char : character_vector := ('0', '0', '0', "00000000", '0');
   signal test_data_index : integer := 0;
 begin  -- architecture a1
   uut: entity work.an8b10b_decoder
@@ -66,8 +66,17 @@ begin  -- architecture a1
   co_disparity_error <= char.disparity_error;
   do_8b <= char.d8b;
 
-  clk <= not clk after clk_period/2;
-  reset <= '1' after clk_period*2;
+  clk_gen: process is
+  begin -- process clk_gen
+    wait for clk_period/2;
+	 clk <= not clk;
+  end process clk_gen;
+  
+  reset_gen: process is
+  begin -- process reset_gen
+    wait for clk_period*2;
+    reset <= '1';
+  end process reset_gen;
 
   test: process is
     variable test_vec : test_vector;

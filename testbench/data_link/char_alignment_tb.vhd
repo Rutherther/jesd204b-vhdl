@@ -60,8 +60,17 @@ begin  -- architecture a1
       ci_synced   => ci_synced,
       co_aligned => co_aligned);
 
-  clk <= not clk after clk_period/2;
-  reset <= '1' after clk_period*2;
+  clk_gen: process is
+  begin -- process clk_gen
+    wait for clk_period/2;
+	 clk <= not clk;
+  end process clk_gen;
+  
+  reset_gen: process is
+  begin -- process reset_gen
+    wait for clk_period*2;
+    reset <= '1';
+  end process reset_gen;
 
   test: process is
     variable test_vec : test_vector;

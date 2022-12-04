@@ -7,15 +7,16 @@ entity data_link_layer is
     K_character  : std_logic_vector(7 downto 0) := "10111100";
     R_character  : std_logic_vector(7 downto 0) := "00011100";
     A_character  : std_logic_vector(7 downto 0) := "01111100";
-    Q_character  : std_logic_vector(7 downto 0) := "10011100");
+    Q_character  : std_logic_vector(7 downto 0) := "10011100";
+    ERROR_CONFIG : error_handling_config := (2, 0, 5, 5, 5);
+	 SCRAMBLING   : std_logic := '0';
+    F : integer := 2;
+    K : integer := 1);
   port (
     ci_char_clk : in std_logic;
     ci_reset    : in std_logic;
 
-    -- lane configuration
-    ci_F : in integer range 0 to 256;
-    ci_K : in integer range 0 to 32;
-    ci_scrambled  : in std_logic;
+    -- link configuration
     do_lane_config : out link_config;
 
     -- synchronization
@@ -74,7 +75,7 @@ begin  -- architecture a1
       ci_char_clk                      => ci_char_clk,
       ci_reset                         => ci_reset,
       ci_state                         => link_controller_co_state,
-      ci_F                             => ci_F,
+      ci_F                             => F,
       di_char                          => decoder_do_char,
       ci_config                        => ci_error_config,
       ci_lane_alignment_error          => lane_alignment_co_error,
@@ -91,8 +92,8 @@ begin  -- architecture a1
       ci_char_clk                => ci_char_clk,
       ci_reset                   => ci_reset,
       ci_resync                  => link_controller_ci_resync,
-      ci_F                       => ci_F,
-      ci_K                       => ci_K,
+      ci_F                       => F,
+      ci_K                       => K,
       ci_lane_alignment_error    => lane_alignment_co_error,
       ci_lane_alignment_aligned  => lane_alignment_co_aligned,
       ci_lane_alignment_ready    => lane_alignment_co_ready,
@@ -123,8 +124,8 @@ begin  -- architecture a1
     port map (
       ci_char_clk           => ci_char_clk,
       ci_reset              => ci_reset,
-      ci_F                  => ci_F,
-      ci_K                  => ci_K,
+      ci_F                  => F,
+      ci_K                  => K,
       ci_state              => link_controller_co_state,
       ci_realign            => lane_alignment_ci_realign,
       co_ready              => lane_alignment_co_ready,
@@ -138,9 +139,9 @@ begin  -- architecture a1
     port map (
       ci_char_clk           => ci_char_clk,
       ci_reset              => ci_reset,
-      ci_scrambled          => ci_scrambled,
-      ci_F                  => ci_F,
-      ci_K                  => ci_K,
+      ci_scrambled          => SCRAMBLING,
+      ci_F                  => F,
+      ci_K                  => K,
       co_correct_sync_chars => frame_alignment_co_correct_sync_chars,
       ci_request_sync       => frame_alignment_ci_request_sync,
       ci_realign            => frame_alignment_ci_realign,
