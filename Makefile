@@ -17,14 +17,14 @@ TESTBENCH ?= $(TOP_ENTITY)_tb # default
 WAVEFORM_VIEWER := gtkwave
 
 COMPILER := ghdl
-COMPILER_FLAGS := --workdir=$(WORKDIR)
+COMPILER_FLAGS := --std=08 --workdir=$(WORKDIR)
 
 STOP_TIME ?= 1000ns
 WAVEFORM_FILE ?= $(SIMDIR)/out.ghw
 
 RUN_FLAGS := --stop-time=$(STOP_TIME) --wave=$(WAVEFORM_FILE) --stats
 
-TBSOURCES := $(wildcard $(TBDIR)/*.$(VHDLEX)) $(wildcard $(TBDIR)/**/*.$(VHDLEX)) 
+TBSOURCES := $(wildcard $(TBDIR)/*.$(VHDLEX)) $(wildcard $(TBDIR)/**/*.$(VHDLEX))
 export SOURCES := $(wildcard $(SRCDIR)/*.$(VHDLEX)) $(wildcard $(SRCDIR)/**/*.$(VHDLEX))
 ALL_SOURCES := $(SOURCES) $(TBSOURCES)
 
