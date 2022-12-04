@@ -4,6 +4,7 @@ sim/
 *.~undo-tree~
 *.bak
 *.qws
+*.rpt
 
 output_files/
 db/
