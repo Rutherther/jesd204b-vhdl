@@ -2,3 +2,11 @@ _impactbatch.log
 work/
 sim/
 *.~undo-tree~
+*.bak
+
+output_files/
+db/
+incremental_db/
+simulation/
+timing/
+*_sim/
