@@ -10,7 +10,7 @@ VHDLEX := vhd
 #                 Top level entity                  #
 #                                                   #
 #####################################################
-export TOP_ENTITY := frame_alignment
+export TOP_ENTITY := jesd204b_rx
 export TOP_ENTITY_VHDL := $(SRCDIR)/$(TOP_ENTITY).$(VHDLEX)
 TESTBENCH ?= $(TOP_ENTITY)_tb # default
 
