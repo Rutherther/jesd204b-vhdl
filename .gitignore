@@ -3,6 +3,7 @@ work/
 sim/
 *.~undo-tree~
 *.bak
+*.qws
 
 output_files/
 db/
