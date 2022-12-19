@@ -1,3 +1,12 @@
+-------------------------------------------------------------------------------
+-- Title      : JESD204B receiver
+-------------------------------------------------------------------------------
+-- File       : jesd204b_rx.vhd
+-------------------------------------------------------------------------------
+-- Description: A top level entity for a JESD204B receiver.
+-- Holds data_link and transport_layers.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.transport_pkg.all;
@@ -6,11 +15,15 @@ use work.jesd204b_pkg.all;
 
 entity jesd204b_rx is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";
-    R_character  : std_logic_vector(7 downto 0) := "00011100";
-    A_character  : std_logic_vector(7 downto 0) := "01111100";
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";
-    K            : integer                      := 1;
+    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+                                                                -- frame character
+    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+                                                                -- alignment character
+    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+                                                                -- frame 2nd character
+    K            : integer                      := 1;  -- Number of frames in a
+                                                       -- multiframe
     CS           : integer                      := 1;  -- Number of control bits per sample
     M            : integer                      := 1;  -- Number of converters
     S            : integer                      := 1;  -- Number of samples
@@ -22,17 +35,19 @@ entity jesd204b_rx is
     ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);
     SCRAMBLING   : std_logic                    := '0');
   port (
-    ci_char_clk  : in std_logic;
-    ci_frame_clk : in std_logic;
-    ci_reset     : in std_logic;
+    ci_char_clk  : in std_logic;        -- Character clock
+    ci_frame_clk : in std_logic;        -- Frame clock
+    ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
 
-    co_lane_config : out link_config;
-    co_nsynced     : out std_logic;
+    co_lane_config : out link_config;   -- The configuration of the link
+    co_nsynced     : out std_logic;     -- Whether receiver is synced (active low)
     co_error       : out std_logic;
 
-    di_transceiver_data : in  lane_input_array(L-1 downto 0);
+    di_transceiver_data : in  lane_input_array(L-1 downto 0);  -- Data from transceivers
     do_samples          : out samples_array(M - 1 downto 0, S - 1 downto 0);
-    co_correct_data     : out std_logic);
+-- Output samples
+    co_correct_data     : out std_logic);  -- Whether samples are correct user
+                                           -- data
 end entity jesd204b_rx;
 
 architecture a1 of jesd204b_rx is

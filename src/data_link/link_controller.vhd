@@ -1,3 +1,12 @@
+-------------------------------------------------------------------------------
+-- Title      : controller of data link layer
+-------------------------------------------------------------------------------
+-- File       : link_controller.vhd
+-------------------------------------------------------------------------------
+-- Description: Controller for link layer, handling CGS and ILAS.
+-- 
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
@@ -11,30 +20,42 @@ use work.data_link_pkg.all;
 
 entity link_controller is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100");
+    K_character  : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
-    ci_char_clk : in std_logic;
-    ci_reset : in std_logic;
-    di_char : in character_vector;
+    ci_char_clk : in std_logic;         -- Character clock
+    ci_reset : in std_logic;            -- Reset (asynchronous, active low)
+    di_char : in character_vector;      -- Output character from 8b10b decoder
 
-    do_config : out link_config;
+    do_config : out link_config;        -- Config found in ILAS
 
-    ci_F : in integer range 0 to 256;
-    ci_K : in integer range 0 to 32;
+    ci_F : in integer range 0 to 256;   -- Number of octets in a frame
+    ci_K : in integer range 0 to 32;    -- Number of frames in a multiframe
 
-    ci_lane_alignment_error : in std_logic;
-    ci_lane_alignment_aligned : in std_logic;
-    ci_lane_alignment_ready : in std_logic;
+    ci_lane_alignment_error : in std_logic;  -- Signals a problem with lane
+                                             -- alignment in this data link
+                                             -- (see lane alighnment component)
+    ci_lane_alignment_aligned : in std_logic;  -- Signals that lane is
+                                               -- correctly aligned (see
+                                               -- lane_alignment component)
+    ci_lane_alignment_ready : in std_logic;  -- Signals that the lane received
+                                             -- /A/ and is waiting to start
+                                             -- sending data (see
+                                             -- lane_alignment component)
 
-    ci_frame_alignment_error : in std_logic;
-    ci_frame_alignment_aligned : in std_logic;
+    ci_frame_alignment_error : in std_logic;  -- Signals that the frame was misaligned.
+    ci_frame_alignment_aligned : in std_logic;  -- Signals that the frame end
+                                                -- was found and did not change.
 
-    ci_resync : in std_logic;
+    ci_resync : in std_logic;           -- Whether to start syncing again.
 
-    co_synced : out std_logic;
-    co_state : out link_state;
-    co_uncorrectable_error : out std_logic;
-    co_error : out std_logic);
+    co_synced : out std_logic;          -- Whether the lane is synced (received
+                                        -- 4 /K/ characters and proceeds correctly)
+    co_state : out link_state;          -- The state of the lane.
+    co_uncorrectable_error : out std_logic;  -- Detected an uncorrectable
+                                             -- error, has to resync (ilas
+                                             -- parsing error)
+    co_error : out std_logic);          -- Detected any error, processing may
+                                        -- differ
 end entity link_controller;
 
 architecture a1 of link_controller is

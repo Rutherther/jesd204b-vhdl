@@ -1,3 +1,12 @@
+-------------------------------------------------------------------------------
+-- Title      : transport layer
+-------------------------------------------------------------------------------
+-- File       : transport_layer.vhd
+-------------------------------------------------------------------------------
+-- Description: Takes aligned frame characters from multiple lanes
+-- Outputs samples from one frame by converter.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
@@ -15,18 +24,22 @@ entity transport_layer is
     Nn : integer := 16);                 -- Size of a word (sample + ctrl if CF
                                          -- =0
   port (
-    ci_char_clk : in std_logic;
-    ci_frame_clk : in std_logic;
-    ci_reset : in std_logic;
-    di_lanes_data : in frame_character_array(0 to L - 1);
+    ci_char_clk : in std_logic;         -- Character clock
+    ci_frame_clk : in std_logic;        -- Frame clock
+    ci_reset : in std_logic;            -- Reset (asynchronous, active low)
+    di_lanes_data : in frame_character_array(0 to L - 1);  -- Data from the lanes
 
-    co_correct_data : out std_logic;
-    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));
+    co_correct_data : out std_logic;    -- Whether the current data are correct
+                                        -- user data
+    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));  -- Samples
+                                                                   -- in the
+                                                                   -- given frame
 end entity transport_layer;
 
 architecture a1 of transport_layer is
 begin  -- architecture a1
 
+  -- maps data from lanes to samples
   octets_to_samples: entity work.octets_to_samples
     generic map (
       CS => CS,

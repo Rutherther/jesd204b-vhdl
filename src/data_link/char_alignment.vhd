@@ -4,8 +4,8 @@
 -------------------------------------------------------------------------------
 -- File       : char_alignment.vhd
 -- Description: Tries to align the beginning of the character from 8b/10b encoding.
--- Accepting 10 bits, outputting 8 bits. Will try to sync to /K/ character when
--- synced is false.
+-- Accepting 10 bits, outputting 10 bits. Will try to sync to /K/ character when
+-- ci_synced is false.
 -------------------------------------------------------------------------------
 
 -- input d_in[9:0], ci_synced

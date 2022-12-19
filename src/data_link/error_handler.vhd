@@ -1,26 +1,47 @@
+-------------------------------------------------------------------------------
+-- Title      : error handler
+-------------------------------------------------------------------------------
+-- File       : error_handler.vhd
+-------------------------------------------------------------------------------
+-- Description: Processes errors given the allowed number of errors
+-- configuration. Outputs request_sync if more than allowed number
+-- of errors was reached.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
 
 entity error_handler is
   port (
-    ci_char_clk                      : in  std_logic;
-    ci_reset                         : in  std_logic;
-    ci_state                         : in link_state;
+    ci_char_clk                      : in  std_logic;  -- Character clock
+    ci_reset                         : in  std_logic;  -- Reset (asynchronous,
+                                                       -- active low)
+    ci_state                         : in link_state;  -- State of the lane.
 
     ci_F : in integer range 0 to 256;
 
-    di_char                          : in  character_vector;
+    di_char                          : in  character_vector;  -- Character from
+                                                              -- 8b10b decoder
 
-    ci_config                        : in  error_handling_config;
-    ci_lane_alignment_error          : in  std_logic;
-    ci_lane_alignment_correct_count  : in  integer;
-    ci_frame_alignment_error         : in  std_logic;
-    ci_frame_alignment_correct_count : in  integer;
+    ci_config                        : in  error_handling_config;  --
+                                                                   --Configuration
+                                                                   --of error handling
+    ci_lane_alignment_error          : in  std_logic;  -- Signals an error with
+                                                       -- lane alignment
+    ci_lane_alignment_correct_count  : in  integer;  -- Signals number of
+                                                     -- alignment characters on
+                                                     -- the same position
+    ci_frame_alignment_error         : in  std_logic;  -- Signals an error with
+                                                       -- frame alignment
+    ci_frame_alignment_correct_count : in  integer;  -- Signals number of
+                                                     -- alignemnt characters on
+                                                     -- the same position
 
-    co_frame_alignment_realign       : out std_logic;
-    co_lane_alignment_realign        : out std_logic;
-    co_request_sync                  : out std_logic);
+    co_frame_alignment_realign       : out std_logic;  -- Output to realign
+                                                       -- frame
+    co_lane_alignment_realign        : out std_logic;  -- Output to realign lane
+    co_request_sync                  : out std_logic);  -- Request a synchronization
 end entity error_handler;
 
 architecture a1 of error_handler is

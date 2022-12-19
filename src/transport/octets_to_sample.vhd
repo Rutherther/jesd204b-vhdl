@@ -1,8 +1,17 @@
+-------------------------------------------------------------------------------
+-- Title      : octets to samples mapping
+-------------------------------------------------------------------------------
+-- File       : octets_to_sample.vhd
+-------------------------------------------------------------------------------
+-- Description: Maps octets from lanes from data link to samples.
+-- In case of any error in the data, last frame will be streamed again.
+-- The data from wrong frame will be dropped.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
 use work.transport_pkg.all;
-
 
 entity octets_to_samples is
   generic (
@@ -16,13 +25,14 @@ entity octets_to_samples is
     Nn : integer := 16);                 -- Size of a word (sample + ctrl if CF
                                         -- =0
   port (
-    ci_char_clk : in std_logic;
-    ci_frame_clk : in std_logic;
-    ci_reset : in std_logic;
-    di_lanes_data : in frame_character_array(0 to L-1);
+    ci_char_clk : in std_logic;         -- Character clock
+    ci_frame_clk : in std_logic;        -- Frame clock
+    ci_reset : in std_logic;            -- Reset (asynchronous, active low)
+    di_lanes_data : in frame_character_array(0 to L-1);  -- Data from the lanes
                                         -- bits
-    co_correct_data : out std_logic;
-    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));
+    co_correct_data : out std_logic;    -- Whether output is correct
+    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));  -- The
+                                                                   -- output samples
 end entity octets_to_samples;
 
 architecture a1 of octets_to_samples is
@@ -92,6 +102,9 @@ begin  -- architecture a
 
   buffered_data <= current_buffered_data or reg_buffered_data;
 
+  -- for one or multiple lanes if CF = 0
+  -- (no control words)
+  -- (control chars are right after sample)
   multi_lane_no_cf: if CF = 0 generate
     converters: for ci in 0 to M - 1 generate
       samples: for si in 0 to S - 1 generate
@@ -104,6 +117,8 @@ begin  -- architecture a
     end generate converters;
   end generate multi_lane_no_cf;
 
+  -- for one or mutliple lanes if CF != 0
+  -- (control words are present)
   multi_lane_cf: if CF > 0 generate
     cf_groups: for cfi in 0 to CF-1 generate
       converters: for ci in 0 to M/CF-1 generate

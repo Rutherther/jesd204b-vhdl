@@ -1,3 +1,12 @@
+-------------------------------------------------------------------------------
+-- Title      : ilas parser
+-------------------------------------------------------------------------------
+-- File       : ilas_parser.vhd
+-------------------------------------------------------------------------------
+-- Description: Parses ilas, outputs it's config and checks
+-- that everything is correct.
+-------------------------------------------------------------------------------
+
 library ieee;
 use work.data_link_pkg.all;
 use ieee.std_logic_1164.all;
@@ -5,24 +14,33 @@ use ieee.numeric_std.all;
 
 entity ilas_parser is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";
-    R_character  : std_logic_vector(7 downto 0) := "00011100";
-    A_character  : std_logic_vector(7 downto 0) := "01111100";
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- 9C
+    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Character
+                                                                -- for syncing
+    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
+                                                                -- multiframe
+                                                                -- start character
+    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- ILAS
+                                                                -- multiframe
+                                                                -- end character
+    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+                                                                -- multiframe
+                                                                -- 2nd character
     multiframes_count : integer                      := 4);
 
   port (
-    ci_char_clk        : in  std_logic;
-    ci_reset           : in  std_logic;
-    ci_F               : in  integer range 0 to 256;
-    ci_K               : in  integer range 0 to 32;
-    ci_state           : in  link_state;
-    di_char            : in  character_vector;
-    do_config          : out link_config;
-    co_finished        : out std_logic;
-    co_error           : out std_logic;
-    co_wrong_chksum    : out std_logic;
-    co_unexpected_char : out std_logic);
+    ci_char_clk        : in  std_logic;  -- Character clock
+    ci_reset           : in  std_logic;  -- Reset (asynchonous, active low)
+    ci_F               : in  integer range 0 to 256;  -- Number of octets in a
+                                                      -- frame
+    ci_K               : in  integer range 0 to 32;  -- Number of frames in a multiframe
+    ci_state           : in  link_state;  -- State of the lane
+    di_char            : in  character_vector;  -- Character from 8b10b decoder
+    do_config          : out link_config;  -- Config found in ILAS
+    co_finished        : out std_logic;  -- The ILAS was received correctly
+    co_error           : out std_logic;  -- The ILAS was not received correctly
+    co_wrong_chksum    : out std_logic;  -- There was a wrong checksum in the ILAS
+    co_unexpected_char : out std_logic);  -- There was a character at
+                                          -- unexpected location in the ILAS
 
 end entity ilas_parser;
 

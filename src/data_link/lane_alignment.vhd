@@ -1,27 +1,47 @@
+-------------------------------------------------------------------------------
+-- Title      : Lane alignment
+-------------------------------------------------------------------------------
+-- File       : lane_alignment.vhd
+-------------------------------------------------------------------------------
+-- Description: Ensures all lanes are aligned to the same character.
+-- Buffers after receiving first /A/ character until ci_start is set.
+-- Then starts sending the data from the buffer.
+-- That ensures all the lanes start at the same position.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
 
 entity lane_alignment is
   generic (
-    buffer_size     : integer          := 256;
-    alignment_character : std_logic_vector(7 downto 0) := "01111100";
+    buffer_size     : integer          := 256;  -- How many octets to keep
+    alignment_character : std_logic_vector(7 downto 0) := "01111100";  -- The K
+                                                                       --
+                                                                       --alignment character
     dummy_character : character_vector := ('1', '0', '0', "10111100", '0'));
+-- Character to send before the buffer is ready and started
 
   port (
-    ci_char_clk           : in  std_logic;
-    ci_reset              : in  std_logic;
-    ci_start              : in  std_logic;
-    ci_state              : in  link_state;
-    ci_realign            : in  std_logic;
-    ci_F                  : in  integer range 0 to 256;
-    ci_K                  : in  integer range 0 to 32;
-    di_char               : in  character_vector;
-    co_ready              : out std_logic;
-    co_aligned            : out std_logic;
-    co_correct_sync_chars : out integer;
-    co_error              : out std_logic;
-    do_char               : out character_vector);
+    ci_char_clk           : in  std_logic;  -- Character clock
+    ci_reset              : in  std_logic;  -- Reset (asynchronous, active low)
+    ci_start              : in  std_logic;  -- Start sending the data from the
+                                            -- buffer.
+    ci_state              : in  link_state;  -- State of the lane
+    ci_realign            : in  std_logic;  -- Whether to realign to the last
+                                            -- found alignment character
+    ci_F                  : in  integer range 0 to 256;  -- Number of octets in
+                                                         -- a frame
+    ci_K                  : in  integer range 0 to 32;  -- Number of frames in
+                                                        -- a multiframe
+    di_char               : in  character_vector;  -- Character from 8b10b decoder
+    co_ready              : out std_logic;  -- Whether /A/ was received and
+                                            -- waiting for start
+    co_aligned            : out std_logic;  -- Whether the alignment is still correct
+    co_correct_sync_chars : out integer;  -- How many alignment characters on
+                                          -- correct place were found in a row
+    co_error              : out std_logic;  -- Whether there is an error
+    do_char               : out character_vector);  -- The aligned output character
 
 end entity lane_alignment;
 

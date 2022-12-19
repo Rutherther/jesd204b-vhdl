@@ -1,27 +1,51 @@
+-------------------------------------------------------------------------------
+-- Title      : frame alignment
+-------------------------------------------------------------------------------
+-- File       : frame_alignment.vhd
+-------------------------------------------------------------------------------
+-- Description: Retrieves alignment of octet in a frame.
+-- Aligns using /A/ and /F/ characters. If these characters are on wrong spot,
+-- returns an error. May realign if requested.
+
+-- IF lane alignment is in use (more lanes are there), do not realign using
+-- frame alignment. Realign using lane alignment. ci_realign of frame alignment
+-- should remain low at all times.
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
 
 entity frame_alignment is
   generic (
-    sync_char      : std_logic_vector(7 downto 0) := "10111100";
-    A_char         : std_logic_vector(7 downto 0) := "01111100";
-    F_char         : std_logic_vector(7 downto 0) := "11111100";
+    sync_char      : std_logic_vector(7 downto 0) := "10111100";  -- K
+                                                                  -- character
+                                                                  -- for syncing
+    A_char         : std_logic_vector(7 downto 0) := "01111100";  -- Last
+                                                                  -- character
+                                                                  -- in multiframe
+    F_char         : std_logic_vector(7 downto 0) := "11111100";  -- Last
+                                                                  -- character
+                                                                  -- in frame
     F_replace_data : std_logic_vector(7 downto 0) := "11111100";  -- The character to replace with upon receiving /F/ with scrambled data
     A_replace_data : std_logic_vector(7 downto 0) := "01111100");  -- The character to replace with upon receiving /A/ with scrambled data
   port (
-    ci_char_clk           : in  std_logic;
-    ci_reset              : in  std_logic;
+    ci_char_clk           : in  std_logic;  -- Character clock
+    ci_reset              : in  std_logic;  -- Reset (asynchronous, active low)
     ci_F                  : in  integer range 0 to 256;  -- The number of octets in a frame
     ci_K                  : in  integer range 0 to 32;  -- The number of frames in a multiframe
     ci_request_sync       : in  std_logic;  -- Whether sync is requested
     ci_scrambled          : in  std_logic;  -- Whether the data is scrambled
-    ci_realign            : in  std_logic;
+    ci_realign            : in  std_logic;  -- Whether to realign to last
+                                            -- alignment character
     di_char               : in  character_vector;  -- The received character
-    co_aligned            : out std_logic;
-    co_error              : out std_logic;
-    co_correct_sync_chars : out integer;
+    co_aligned            : out std_logic;  -- Whether the alignment is right
+    co_error              : out std_logic;  -- Whether there was an error with
+                                            -- the alignment
+    co_correct_sync_chars : out integer;  -- Number of alignment characters on
+                                          -- same position in a row
     do_char               : out frame_character);  -- The output character
+                                                   -- (going to transport layer)
 end entity frame_alignment;
 
 architecture a1 of frame_alignment is

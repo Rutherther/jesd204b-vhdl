@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+-- Package for jesd204b types
 package jesd204b_pkg is
 
   -- array input data from lanes

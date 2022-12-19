@@ -1,3 +1,14 @@
+-------------------------------------------------------------------------------
+-- Title      : 8b10b decoder
+-------------------------------------------------------------------------------
+-- File       : an8b10b_decoder.vhd
+-------------------------------------------------------------------------------
+-- Description: Decodes 8b10b encoding, outputs 8bit. Expects aligned characters
+-- at input. Outputs do_char with disparity error and missing (not in table) errors.
+-- For first character it's possible to get a disparity error.
+-------------------------------------------------------------------------------
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_misc.all;
@@ -7,11 +18,11 @@ use work.data_link_pkg.all;
 entity an8b10b_decoder is
   port (
     ci_char_clk : in  std_logic;        -- The character clock
-    ci_reset    : in  std_logic;        -- The reset
+    ci_reset    : in  std_logic;        -- The reset (asynchronous active low)
     di_10b      : in  std_logic_vector(9 downto 0);  -- The 8b10b encoded input data
-    do_char     : out character_vector;  -- The output character vector
-    co_error    : out std_logic);       -- Whether there is an error
-                                        -- (disparity or invalid character)
+    do_char     : out character_vector;  -- The output decoded 8b data
+    co_error    : out std_logic);       -- Whether there is an error (disparity
+                                        -- or missing)
 end entity an8b10b_decoder;
 
 architecture a1 of an8b10b_decoder is

@@ -1,35 +1,52 @@
+-------------------------------------------------------------------------------
+-- Title      : data link
+-------------------------------------------------------------------------------
+-- File       : data_link_layer.vhd
+-------------------------------------------------------------------------------
+-- Description: A wrapper entity for data link components.
+-- Receives 10b characters, outputs aligned frame 8b characters
+-- Connects:
+--
+-- ############################## DATA LINK ###################################
+--  char_alignment => 8b10bdecoder => lane_alignment => frame_alignment
+--  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--    error_handler
+--  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--    link_controller
+-------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
 
 entity data_link_layer is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";
-    R_character  : std_logic_vector(7 downto 0) := "00011100";
-    A_character  : std_logic_vector(7 downto 0) := "01111100";
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";
-    ERROR_CONFIG : error_handling_config := (2, 0, 5, 5, 5);
-	 SCRAMBLING   : std_logic := '0';
-    F : integer := 2;
-    K : integer := 1);
+    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- K sync character
+    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
+                                                                -- multiframe start
+    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
+    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
+                                                                -- 2nd character
+    ERROR_CONFIG : error_handling_config := (2, 0, 5, 5, 5);  -- Configuration
+                                                              -- for the error
+    SCRAMBLING   : std_logic := '0';     -- Whether scrambling is enabled
+    F : integer := 2;                   -- Number of octets in a frame
+    K : integer := 1);                  -- Number of frames in a mutliframe
   port (
-    ci_char_clk : in std_logic;
-    ci_reset    : in std_logic;
+    ci_char_clk : in std_logic;         -- Character clock
+    ci_reset    : in std_logic;         -- Reset (asynchronous, active low)
 
     -- link configuration
-    do_lane_config : out link_config;
+    do_lane_config : out link_config;   -- Configuration of the link
 
     -- synchronization
     co_lane_ready : out std_logic;      -- Received /A/, waiting for lane sync
     ci_lane_start : in std_logic;       -- Start sending data from lane buffer
 
-    -- errors
-    ci_error_config : in error_handling_config;
-
     -- input, output
-    co_synced : out std_logic;
-    di_10b : in std_logic_vector(9 downto 0);
-    do_char : out frame_character);
+    co_synced : out std_logic;          -- Whether the lane is synced
+    di_10b : in std_logic_vector(9 downto 0);  -- The 10b input character
+    do_char : out frame_character);     -- The aligned frame output character
 end entity data_link_layer;
 
 architecture a1 of data_link_layer is
@@ -77,7 +94,7 @@ begin  -- architecture a1
       ci_state                         => link_controller_co_state,
       ci_F                             => F,
       di_char                          => decoder_do_char,
-      ci_config                        => ci_error_config,
+      ci_config                        => ERROR_CONFIG,
       ci_lane_alignment_error          => lane_alignment_co_error,
       ci_frame_alignment_error         => frame_alignment_co_error,
       ci_lane_alignment_correct_count  => lane_alignment_co_correct_sync_chars,
