@@ -28,6 +28,8 @@ package transport_pkg is
                                         -- instead of new frame
   end record frame_state;
 
+  type frame_state_array is array (natural range <>) of frame_state;
+
   -- Array of frame characters (characters in one frame)
   type lane_character_array is array (natural range <>) of std_logic_vector;
 

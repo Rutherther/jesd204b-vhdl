@@ -27,13 +27,10 @@ entity transport_layer is
     ci_char_clk : in std_logic;         -- Character clock
     ci_frame_clk : in std_logic;        -- Frame clock
     ci_reset : in std_logic;            -- Reset (asynchronous, active low)
-    di_lanes_data : in frame_character_array(0 to L - 1);  -- Data from the lanes
-
-    co_correct_data : out std_logic;    -- Whether the current data are correct
-                                        -- user data
-    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));  -- Samples
-                                                                   -- in the
-                                                                   -- given frame
+    ci_frame_states  : in frame_state_array(0 to L-1);
+    co_frame_state  : out frame_state;
+    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));    -- The
+                                        -- output samples
 end entity transport_layer;
 
 architecture a1 of transport_layer is
@@ -54,8 +51,9 @@ begin  -- architecture a1
       ci_char_clk     => ci_char_clk,
       ci_frame_clk    => ci_frame_clk,
       ci_reset        => ci_reset,
+      ci_frame_states => ci_frame_states,
       di_lanes_data   => di_lanes_data,
-      co_correct_data => co_correct_data,
+      co_frame_state  => co_frame_staet,
       do_samples_data => do_samples_data);
 
 end architecture a1;
