@@ -71,6 +71,11 @@ begin  -- architecture a
     elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
       do_samples_data <= next_samples_data;
       co_frame_state <= current_frame_state;
+
+      if any_error = '0' then
+        prev_samples_data <= samples_data;
+      end if;
+
       for i in 0 to L-1 loop
         reg_buffered_data(L*F*8 - 1 - i*F*8 downto L*F*8 - (i + 1)*F*8) <= di_lanes_data(i);
         reg_state_user_data(i) <= ci_frame_states(i).user_data;
