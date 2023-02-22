@@ -2,18 +2,20 @@ library ieee;
 use ieee.std_logic_1164.all;
 use work.testing_functions.all;
 use work.data_link_pkg.all;
+use work.transport_pkg.all;
 
 entity frame_alignment_tb is
 end entity frame_alignment_tb;
 
 architecture a1 of frame_alignment_tb is
+  constant F : integer range 0 to 256 := 5;
+  constant K : integer range 0 to 32 := 4;
+
   type test_vector is record
     ci_request_sync : std_logic;
-    ci_scrambled : std_logic;
     ci_realign : std_logic;
     di_char : character_vector;
 
-    expected_char : frame_character;
     expected_aligned : std_logic;
     expected_error : std_logic;
 
@@ -23,55 +25,49 @@ architecture a1 of frame_alignment_tb is
   constant test_vectors : test_vector_array :=
   (
   -- rq  scra real  kout  der mer   data   expec kout  der  mer  data       aler oct fram
-    ('0', '0', '0', ('1', '0', '0', "10111100", '0'), ('1', '0', '0', "10111100", 0, 0, '0'), '0', '0'),
-    ('0', '0', '0', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 0, 0, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "10101010", '0'), ('0', '0', '0', "10101010", 1, 0, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "01010101", '0'), ('0', '0', '0', "01010101", 2, 0, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "01010101", '0'), ('0', '0', '0', "01010101", 3, 0, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "01010101", '0'), ('0', '0', '0', "01010101", 4, 0, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 0, 1, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 1, 1, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 2, 1, '0'), '1', '0'),
-    ('0', '0', '0', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 3, 1, '0'), '1', '0'),
-    ('0', '0', '0', ('1', '0', '0', "11111100", '0'), ('0', '0', '0', "01010101", 4, 1, '0'), '1', '0'),
-    ('0', '0', '0', ('1', '0', '0', "11111100", '0'), ('0', '0', '0', "01010101", 0, 2, '0'), '0', '1'),
-    ('0', '0', '0', ('1', '0', '0', "11111100", '0'), ('0', '0', '0', "01010101", 1, 2, '0'), '0', '1'),
-    ('0', '0', '0', ('0', '0', '0', "11110000", '0'), ('0', '0', '0', "11110000", 2, 2, '0'), '0', '1'),
-    ('0', '0', '0', ('0', '0', '0', "11110000", '0'), ('0', '0', '0', "11110000", 3, 2, '0'), '0', '1'),
-    ('0', '0', '0', ('1', '0', '0', "11111100", '0'), ('0', '0', '0', "01010101", 4, 2, '0'), '1', '0'),
-    ('1', '1', '1', ('0', '0', '0', "11111100", '0'), ('0', '0', '0', "11111100", 0, 0, '0'), '0', '0'),
-    ('0', '1', '1', ('1', '0', '0', "10111100", '0'), ('1', '0', '0', "10111100", 0, 0, '0'), '0', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 0, 0, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 1, 0, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 2, 0, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 3, 0, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 4, 0, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 0, 1, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 1, 1, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 2, 1, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "00000000", '0'), ('0', '0', '0', "00000000", 3, 1, '0'), '1', '0'),
-    ('0', '1', '1', ('1', '0', '0', "11111100", '0'), ('0', '0', '0', "11111100", 4, 1, '0'), '1', '0'),
-    ('0', '1', '1', ('1', '0', '0', "01111100", '0'), ('0', '0', '0', "01111100", 0, 2, '0'), '0', '1'),
-    ('0', '1', '1', ('0', '0', '0', "01111100", '0'), ('0', '0', '0', "01111100", 0, 3, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 1, 3, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 2, 3, '0'), '1', '0'),
-    ('0', '1', '1', ('0', '0', '0', "11111111", '0'), ('0', '0', '0', "11111111", 3, 3, '0'), '1', '0')
+    ('1', '0', ('1', '0', '0', "10111100", '0'), '0', '0'),
+    ('1', '0', ('1', '0', '0', "10111100", '0'), '0', '0'),
+    ('0', '0', ('1', '0', '0', "10111100", '0'), '0', '0'),
+    ('0', '0', ('1', '0', '0', "10111100", '0'), '0', '0'),
+    ('0', '0', ('0', '0', '0', "11000001", '1'), '0', '0'),  -- frame begins
+    ('0', '0', ('0', '0', '0', "11000010", '1'), '0', '0'),
+    ('0', '0', ('0', '0', '0', "11000011", '1'), '0', '0'),
+    ('0', '0', ('0', '0', '0', "11000100", '1'), '0', '0'),
+    ('0', '0', ('1', '0', '0', "11111100", '1'), '0', '0'),  -- frame ends
+    ('0', '0', ('0', '0', '0', "00000001", '1'), '1', '0'),
+    ('0', '0', ('1', '0', '0', "00000010", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00000011", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00000100", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00000000", '1'), '1', '0'),  -- frame begins
+    ('0', '0', ('1', '0', '0', "11111100", '1'), '0', '1'),  -- frame begins, /A/
+    ('0', '0', ('1', '0', '0', "11111100", '1'), '0', '1'),  -- frame begins, /A/
+    ('0', '0', ('0', '0', '0', "01000001", '1'), '0', '1'),
+    ('0', '0', ('0', '0', '0', "01000010", '1'), '0', '1'),
+    ('0', '0', ('0', '0', '0', "01000011", '1'), '0', '1'),
+    ('0', '0', ('0', '0', '0', "01000100", '1'), '0', '1'),
+    ('0', '0', ('1', '0', '0', "11111100", '1'), '0', '1'),
+    ('0', '1', ('0', '0', '0', "00100001", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00100010", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00100011", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00100100", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00000101", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00000001", '1'), '1', '0'),
+    ('0', '0', ('0', '0', '0', "00000000", '1'), '1', '0')  -- frame begin
   );
 
-  constant clk_period : time := 1 ns;
+  constant char_clk_period : time := 1 ns;
+  constant frame_clk_period : time := 1 ns * F;
 
-  constant F : integer range 0 to 256 := 5;
-  constant K : integer range 0 to 32 := 4;
-
-  signal clk : std_logic := '0';
+  signal char_clk : std_logic := '0';
+  signal frame_clk : std_logic := '0';
   signal reset : std_logic := '0';
 
   signal di_char : character_vector;
-  signal do_char : frame_character;
+  signal do_aligned_chars : std_logic_vector(8*F - 1 downto 0);
+  signal co_frame_state : frame_state;
 
   signal ci_request_sync : std_logic;
   signal ci_realign : std_logic;
-  signal ci_scrambled : std_logic;
   signal co_aligned : std_logic;
   signal co_error : std_logic;
 
@@ -79,28 +75,37 @@ architecture a1 of frame_alignment_tb is
 
 begin  -- architecture a1
   uut : entity work.frame_alignment
+    generic map (
+      SCRAMBLED => false,
+      F         => F,
+      K         => K)
     port map (
-      ci_char_clk     => clk,
-      ci_reset        => reset,
-      ci_F            => F,
-      ci_K            => K,
-      ci_scrambled    => ci_scrambled,
-      ci_request_sync => ci_request_sync,
-      ci_realign      => ci_realign,
-      di_char         => di_char,
-      co_aligned      => co_aligned,
-      co_error        => co_error,
-      do_char         => do_char);
+      ci_frame_clk     => frame_clk,
+      ci_char_clk      => char_clk,
+      ci_reset         => reset,
+      ci_request_sync  => ci_request_sync,
+      ci_realign       => ci_realign,
+      di_char          => di_char,
+      co_aligned       => co_aligned,
+      co_error         => co_error,
+      do_aligned_chars => do_aligned_chars,
+      co_frame_state   => co_frame_state);
 
   clk_gen: process is
   begin -- process clk_gen
-    wait for clk_period/2;
-	 clk <= not clk;
+    wait for char_clk_period/2;
+    char_clk <= not char_clk;
   end process clk_gen;
+
+  frame_clk_gen: process is
+  begin -- process clk_gen
+    wait for frame_clk_period/2;
+    frame_clk <= not frame_clk;
+  end process frame_clk_gen;
   
   reset_gen: process is
   begin -- process reset_gen
-    wait for clk_period*2;
+    wait for char_clk_period*2;
     reset <= '1';
   end process reset_gen;
 
@@ -108,13 +113,12 @@ begin  -- architecture a1
     variable test_vec : test_vector;
     variable prev_test_vec : test_vector;
   begin  -- process test
-    wait for clk_period*2;
+    wait for char_clk_period*2;
 
     for i in test_vectors'range loop
       test_data_index <= i;
       test_vec := test_vectors(i);
       di_char <= test_vec.di_char;
-      ci_scrambled <= test_vec.ci_scrambled;
       ci_realign <= test_vec.ci_realign;
       ci_request_sync <= test_vec.ci_request_sync;
 
@@ -123,10 +127,9 @@ begin  -- architecture a1
 
         assert co_aligned = prev_test_vec.expected_aligned report "The aligned does not match. Expected: " & std_logic'image(prev_test_vec.expected_aligned) &", Index: " & integer'image(i-1) severity error;
         assert co_error = prev_test_vec.expected_error report "The error does not match. Index: " & integer'image(i-1) severity error;
-        assert do_char = prev_test_vec.expected_char report "The character does not match. Index: " & integer'image(i-1) severity error;
       end if;
 
-      wait for clk_period;
+      wait for char_clk_period;
     end loop;  -- i
     wait for 100 ms;
   end process test;
