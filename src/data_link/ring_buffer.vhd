@@ -28,7 +28,7 @@ end entity ring_buffer;
 
 architecture a1 of ring_buffer is
     signal buff : std_logic_vector(CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
-    signal buff_twice : std_logic_vector(2*CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
+    signal buff_triple : std_logic_vector(3*CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
     signal next_read : std_logic_vector(CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
     signal read_position : integer := 0;
     signal adjusted_read_position : integer := 0;
@@ -47,11 +47,11 @@ begin  -- architecture a1
             read_position <= 0;
             reg_size <= 0;
         elsif ci_clk'event and ci_clk = '1' then  -- rising clock edge
-            if ci_read = '1' then
+            if ci_read = '1' and size >= READ_SIZE + ci_adjust_position then
                 read_position <= (read_position + ci_adjust_position + READ_SIZE) mod BUFFER_SIZE;
                 co_read_position <= read_position + ci_adjust_position;
                 reg_size <= size - READ_SIZE - ci_adjust_position + 1;
-                co_read <= buff_twice(2*CHARACTER_SIZE*BUFFER_SIZE - 1 - (read_position + ci_adjust_position)*CHARACTER_SIZE downto 2*CHARACTER_SIZE*BUFFER_SIZE - (read_position + ci_adjust_position + READ_SIZE)*CHARACTER_SIZE);
+                co_read <= buff_triple(2*CHARACTER_SIZE*BUFFER_SIZE - 1 - (read_position + ci_adjust_position)*CHARACTER_SIZE downto 2*CHARACTER_SIZE*BUFFER_SIZE - (read_position + ci_adjust_position + READ_SIZE)*CHARACTER_SIZE);
             else
                 reg_size <= reg_size + 1;
             end if;
@@ -66,8 +66,9 @@ begin  -- architecture a1
     co_size <= size;
     size <= BUFFER_SIZE when reg_size > BUFFER_SIZE else
                reg_size;
-    buff_twice(2*CHARACTER_SIZE*BUFFER_SIZE - 1 downto CHARACTER_SIZE*BUFFER_SIZE) <= buff;
-    buff_twice(CHARACTER_SIZE*BUFFER_SIZE - 1 downto 0) <= buff;
+    buff_triple(3*CHARACTER_SIZE*BUFFER_SIZE - 1 downto 2*CHARACTER_SIZE*BUFFER_SIZE) <= buff;
+    buff_triple(2*CHARACTER_SIZE*BUFFER_SIZE - 1 downto CHARACTER_SIZE*BUFFER_SIZE) <= buff;
+    buff_triple(CHARACTER_SIZE*BUFFER_SIZE - 1 downto 0) <= buff;
 
     co_filled <=  '1' when reg_size > BUFFER_SIZE else
                   '0';
