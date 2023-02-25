@@ -45,7 +45,9 @@ begin  -- architecture a1
         if ci_reset = '0' then          -- asynchronous reset (active low)
             buff <= (others => '0');
             read_position <= 0;
+            write_position <= 0;
             reg_size <= 0;
+            co_read_position <= 0;
         elsif ci_clk'event and ci_clk = '1' then  -- rising clock edge
             if ci_read = '1' and size >= READ_SIZE + ci_adjust_position then
                 read_position <= (read_position + ci_adjust_position + READ_SIZE) mod BUFFER_SIZE;
