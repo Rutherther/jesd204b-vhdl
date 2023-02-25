@@ -90,8 +90,7 @@ architecture a1 of ilas_parser is
     return data(up_index - 7 + bit_index);
   end function getBitByIndex;
 begin  -- architecture a1
-  --octets_in_multiframe <= ci_F * CI_K;
-  octets_in_multiframe <= 17;
+  octets_in_multiframe <= ci_F * CI_K;
   -- ILAS
     -- one multiframe is sent
     -- 4 frames in a multiframe
@@ -181,7 +180,7 @@ begin  -- architecture a1
             err <= '1';
           end if;
         end if;
-      elsif reg_multiframe_index > multiframes_count - 1 then
+      elsif reg_multiframe_index > ci_K - 1 then
         err <= '1';
       end if;
     end if;
