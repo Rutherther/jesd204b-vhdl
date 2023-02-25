@@ -79,6 +79,7 @@ architecture a1 of frame_alignment is
   signal reg_known_sync_char_position : integer range 0 to 256;
 
   signal next_octet_index : integer := 0;
+  signal next_adjusted_octet_index : integer := 0;
 begin  -- architecture a1
   data_buffer: entity work.ring_buffer
     generic map (
@@ -117,6 +118,7 @@ begin  -- architecture a1
       reg_state <= INIT;
       reg_last_frame_data <= (others => '0');
       next_frame_state <= ('0', '0', '0', '0', '0', '0', '0', '0');
+      buffer_align_to <= -1;
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
       -- set last_frame_data if this is the last frame and not /F/ or /A/
       if next_is_last_octet = '1' and not (is_f = '1' or is_a = '1') then
@@ -169,7 +171,7 @@ begin  -- architecture a1
             reg_state <= ALIGNED;
           elsif ci_realign = '1' then
             -- align to last known sync char position
-            buffer_align_to <= reg_known_sync_char_position;
+            buffer_align_to <= reg_known_sync_char_position + buffer_read_position;
             reg_state <= ALIGNED;
           end if;
         end if;
@@ -179,17 +181,18 @@ begin  -- architecture a1
 
   co_correct_sync_chars <= reg_correct_sync_chars;
   buffer_raw_adjust_position <= (buffer_align_to + 1 - buffer_read_position) mod F;
-  buffer_adjust_position <= buffer_raw_adjust_position when buffer_raw_adjust_position < F/2 + 1
+  buffer_adjust_position <= buffer_raw_adjust_position when buffer_raw_adjust_position <= F/2 + 1
                             else buffer_raw_adjust_position - F;
 
   is_wrong_char <= (is_f and not next_is_last_octet) or (is_a and not next_is_last_octet);
   buffer_character <= di_char.d8b when is_f = '0' and is_a = '0' else
-                 reg_last_frame_data when SCRAMBLED else
+                 reg_last_frame_data when not SCRAMBLED else
                  F_replace_data when is_f = '1' else
                  A_replace_data;
 
-  next_octet_index <= buffer_write_position mod F;
-  next_is_last_octet <= '1' when F = 1 or next_octet_index = F - 2 else '0';
+  next_adjusted_octet_index <= (buffer_write_position - buffer_read_position - buffer_adjust_position) mod F;
+  next_octet_index <= (buffer_write_position - buffer_read_position) mod F;
+  next_is_last_octet <= '1' when next_adjusted_octet_index = F - 1 else '0';
 
   is_f <= '1' when di_char.d8b = F_char and di_char.kout = '1' else '0';
   is_a <= '1' when di_char.d8b = A_char and di_char.kout = '1' else '0';
