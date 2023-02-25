@@ -93,5 +93,5 @@ begin  -- architecture a1
 
   next_co_aligned <= (reg_found_sync_char or reg_co_aligned) and not (reg_last_synced and not ci_synced);
   next_do_10b(9 downto 0) <= reg_cache_10b(reg_alignment_index+9 downto reg_alignment_index);
-  next_cache_10b(19 downto 0) <= di_10b(9 downto 0) & reg_cache_10b(19 downto 10);
+  next_cache_10b(19 downto 0) <= reg_cache_10b(9 downto 0) & di_10b(9 downto 0);
 end architecture a1;
