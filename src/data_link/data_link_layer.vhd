@@ -18,35 +18,38 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
+use work.transport_pkg.all;
 
 entity data_link_layer is
   generic (
     K_character  : std_logic_vector(7 downto 0) := "10111100";  -- K sync character
     R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
-                                                                -- multiframe start
+                                        -- multiframe start
     A_character  : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
     Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
-                                                                -- 2nd character
-    ERROR_CONFIG : error_handling_config := (2, 0, 5, 5, 5);  -- Configuration
-                                                              -- for the error
-    SCRAMBLING   : std_logic := '0';     -- Whether scrambling is enabled
-    F : integer := 2;                   -- Number of octets in a frame
-    K : integer := 1);                  -- Number of frames in a mutliframe
+                                        -- 2nd character
+    ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);  -- Configuration
+                                        -- for the error
+    SCRAMBLING   : std_logic                    := '0';  -- Whether scrambling is enabled
+    F            : integer                      := 2;  -- Number of octets in a frame
+    K            : integer                      := 1);  -- Number of frames in a mutliframe
   port (
-    ci_char_clk : in std_logic;         -- Character clock
-    ci_reset    : in std_logic;         -- Reset (asynchronous, active low)
+    ci_char_clk  : in std_logic;        -- Character clock
+    ci_frame_clk : in std_logic;        -- Frame clock
+    ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
 
     -- link configuration
-    do_lane_config : out link_config;   -- Configuration of the link
+    do_lane_config : out link_config;  -- Configuration of the link
 
     -- synchronization
-    co_lane_ready : out std_logic;      -- Received /A/, waiting for lane sync
-    ci_lane_start : in std_logic;       -- Start sending data from lane buffer
+    co_lane_ready : out std_logic;  -- Received /A/, waiting for lane sync
+    ci_lane_start : in  std_logic;  -- Start sending data from lane buffer
 
     -- input, output
-    co_synced : out std_logic;          -- Whether the lane is synced
-    di_10b : in std_logic_vector(9 downto 0);  -- The 10b input character
-    do_char : out frame_character);     -- The aligned frame output character
+    co_synced        : out std_logic;  -- Whether the lane is synced
+    di_10b           : in  std_logic_vector(9 downto 0);  -- The 10b input character
+    do_aligned_chars : out std_logic_vector(8*F - 1 downto 0);
+    co_frame_state   : out frame_state);  -- The aligned frame output character
 end entity data_link_layer;
 
 architecture a1 of data_link_layer is
@@ -54,22 +57,23 @@ architecture a1 of data_link_layer is
 
   signal decoder_do_char : character_vector;
 
-  signal lane_alignment_ci_realign : std_logic := '0';
-  signal lane_alignment_co_aligned : std_logic;
-  signal lane_alignment_co_error : std_logic;
-  signal lane_alignment_co_ready : std_logic;
-  signal lane_alignment_do_char : character_vector;
+  signal lane_alignment_ci_realign            : std_logic := '0';
+  signal lane_alignment_co_aligned            : std_logic;
+  signal lane_alignment_co_error              : std_logic;
+  signal lane_alignment_co_ready              : std_logic;
+  signal lane_alignment_do_char               : character_vector;
   signal lane_alignment_co_correct_sync_chars : integer;
 
-  signal frame_alignment_ci_request_sync : std_logic;
-  signal frame_alignment_ci_realign : std_logic := '0';
-  signal frame_alignment_co_aligned : std_logic;
-  signal frame_alignment_co_error : std_logic;
-  signal frame_alignment_do_char : frame_character;
+  signal frame_alignment_ci_request_sync       : std_logic;
+  signal frame_alignment_ci_realign            : std_logic := '0';
+  signal frame_alignment_co_aligned            : std_logic;
+  signal frame_alignment_co_error              : std_logic;
+  signal frame_alignment_do_aligned_chars      : std_logic_vector(8*F - 1 downto 0);
+  signal frame_alignment_co_frame_state        : frame_state;
   signal frame_alignment_co_correct_sync_chars : integer;
 
   signal link_controller_co_synced : std_logic;
-  signal link_controller_co_state : link_state;
+  signal link_controller_co_state  : link_state;
   signal link_controller_do_config : link_config;
   signal link_controller_ci_resync : std_logic;
 
@@ -77,7 +81,9 @@ begin  -- architecture a1
   do_lane_config <= link_controller_do_config;
   co_lane_ready <= lane_alignment_co_ready;
   co_synced <= link_controller_co_synced;
-  do_char <= frame_alignment_do_char;
+  do_aligned_chars <= frame_alignment_do_aligned_chars;
+  co_frame_state <= frame_alignment_co_frame_state;
+  co_synced <= link_controller_co_synced;
 
   frame_alignment_ci_request_sync <= not link_controller_co_synced;
 
@@ -117,6 +123,8 @@ begin  -- architecture a1
       ci_frame_alignment_error   => frame_alignment_co_error,
       ci_frame_alignment_aligned => frame_alignment_co_aligned,
       di_char                    => decoder_do_char,
+      co_synced                  => link_controller_co_synced,
+      co_state                   => link_controller_co_state,
       do_config                  => link_controller_do_config);
 
   -- char alignment
@@ -153,12 +161,16 @@ begin  -- architecture a1
 
   -- frame alignment
   frame_alignment : entity work.frame_alignment
+    generic map (
+      SCRAMBLING => SCRAMBLING,
+      F          => F,
+      K          => K)
     port map (
       ci_char_clk           => ci_char_clk,
+      ci_frame_clk          => ci_frame_clk,
       ci_reset              => ci_reset,
-      ci_scrambled          => SCRAMBLING,
-      ci_F                  => F,
-      ci_K                  => K,
+      co_frame_state        => frame_alignment_co_frame_state,
+      do_aligned_chars      => frame_alignment_do_aligned_chars,
       co_correct_sync_chars => frame_alignment_co_correct_sync_chars,
       ci_request_sync       => frame_alignment_ci_request_sync,
       ci_realign            => frame_alignment_ci_realign,
