@@ -16,23 +16,23 @@ use work.transport_pkg.all;
 entity octets_to_samples is
   generic (
     CS : integer := 1;                  -- Number of control bits per sample
-    M : integer := 1;                   -- Number of converters
-    S : integer := 1;                   -- Number of samples
-    L : integer := 1;                   -- Number of lanes
-    F : integer := 2;                  -- Number of octets in a frame
+    M  : integer := 1;                  -- Number of converters
+    S  : integer := 1;                  -- Number of samples
+    L  : integer := 1;                  -- Number of lanes
+    F  : integer := 2;                  -- Number of octets in a frame
     CF : integer := 0;                  -- Number of control words
-    N : integer := 12;                  -- Size of a sample
-    Nn : integer := 16);                 -- Size of a word (sample + ctrl if CF
+    N  : integer := 12;                 -- Size of a sample
+    Nn : integer := 16);                -- Size of a word (sample + ctrl if CF
                                         -- =0
   port (
-    ci_char_clk : in std_logic;         -- Character clock
-    ci_frame_clk : in std_logic;        -- Frame clock
-    ci_reset : in std_logic;            -- Reset (asynchronous, active low)
-    di_lanes_data : in frame_character_array(0 to L-1);  -- Data from the lanes
-                                        -- bits
-    co_correct_data : out std_logic;    -- Whether output is correct
-    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));  -- The
-                                                                   -- output samples
+    ci_frame_clk    : in  std_logic;    -- Frame clock
+    ci_reset        : in  std_logic;    -- Reset (asynchronous, active low)
+    di_lanes_data   : in  lane_character_array(0 to L-1)(F*8-1 downto 0);  -- Data from the lanes
+                                                                     -- bits
+    ci_frame_states  : in frame_state_array(0 to L-1);
+    co_frame_state  : out frame_state;
+    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));    -- The
+                                        -- output samples
 end entity octets_to_samples;
 
 architecture a1 of octets_to_samples is
@@ -45,62 +45,68 @@ architecture a1 of octets_to_samples is
   signal next_samples_data : samples_array
   (0 to M - 1, 0 to S - 1)
     (data(N - 1 downto 0), ctrl_bits(CS - 1 downto 0));
-
-  signal reg_all_user_data : std_logic;  -- if '0', set correct_data to '0'.
-  signal next_correct_data : std_logic;  -- if '0', set correct_data to '0'.
   signal reg_error         : std_logic;  -- if err, repeat last samples.
-  signal new_frame         : std_logic;  -- Whether current frame is new frame
+  signal current_frame_state : frame_state;
 
   signal reg_buffered_data : std_logic_vector(L*F*8-1 downto 0) := (others => '0');
-  signal current_buffered_data : std_logic_vector(L*F*8-1 downto 0) := (others => '0');
-  signal buffered_data : std_logic_vector(L*F*8-1 downto 0) := (others => '0');
+  signal reg_state_user_data : std_logic_vector(L-1 downto 0);
+  signal reg_state_invalid_character : std_logic_vector(L-1 downto 0);
+  signal reg_state_not_enough_data : std_logic_vector(L-1 downto 0);
+  signal reg_state_ring_buffer_overflow : std_logic_vector(L-1 downto 0);
+  signal reg_state_disparity_error : std_logic_vector(L-1 downto 0);
+  signal reg_state_not_in_table_error : std_logic_vector(L-1 downto 0);
+  signal reg_state_wrong_alignment : std_logic_vector(L-1 downto 0);
+  signal reg_state_last_frame_repeated : std_logic_vector(L-1 downto 0);
 
+  signal any_error : std_logic := '0';
+
+  constant all_ones : std_logic_vector(L-1 downto 0) := (others => '1');
+  constant all_zeros : std_logic_vector(L-1 downto 0) := (others => '0');
 begin  -- architecture a
-  set_data: process (ci_char_clk, ci_reset) is
+  set_data: process (ci_frame_clk, ci_reset) is
   begin  -- process set_data
     if ci_reset = '0' then              -- asynchronous reset (active low)
-      co_correct_data <= '0';
-      reg_all_user_data <= '1';
       reg_error <= '0';
       reg_buffered_data <= (others => '0');
-      next_correct_data <= '0';
-    elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
-      if di_lanes_data(0).octet_index = 0 then
-        reg_all_user_data <= '1';
-      end if;
+    elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
       do_samples_data <= next_samples_data;
-      co_correct_data <= next_correct_data;
-      if new_frame = '1' then
-        if reg_error = '1' then
-          next_samples_data <= prev_samples_data;
-        else
-          next_samples_data <= samples_data;
-          prev_samples_data <= samples_data;
-        end if;
+      co_frame_state <= current_frame_state;
 
-        reg_buffered_data <= (others => '0');
-        next_correct_data <= reg_all_user_data;
-        reg_all_user_data <= '1';
-        reg_error <= '0';
-      else
-        for i in 0 to L-1 loop
-          reg_buffered_data(L*F*8 - 1 - i*F*8 - 8*di_lanes_data(i).octet_index downto L*F*8 - 1 - i*F*8 - 8*di_lanes_data(i).octet_index - 7) <= di_lanes_data(i).d8b;
-
-          if di_lanes_data(i).user_data = '0' or di_lanes_data(i).disparity_error = '1' or di_lanes_data(i).missing_error = '1' then
-            reg_all_user_data <= '0';
-          end if;
-        end loop;  -- i
+      if any_error = '0' then
+        prev_samples_data <= samples_data;
       end if;
+
+      for i in 0 to L-1 loop
+        reg_buffered_data(L*F*8 - 1 - i*F*8 downto L*F*8 - (i + 1)*F*8) <= di_lanes_data(i);
+        reg_state_user_data(i) <= ci_frame_states(i).user_data;
+        reg_state_invalid_character(i) <= ci_frame_states(i).invalid_characters;
+        reg_state_not_enough_data(i) <= ci_frame_states(i).not_enough_data;
+        reg_state_ring_buffer_overflow(i) <= ci_frame_states(i).ring_buffer_overflow;
+        reg_state_disparity_error(i) <= ci_frame_states(i).disparity_error;
+        reg_state_not_in_table_error(i) <= ci_frame_states(i).not_in_table_error;
+        reg_state_wrong_alignment(i) <= ci_frame_states(i).wrong_alignment;
+        reg_state_last_frame_repeated(i) <= ci_frame_states(i).last_frame_repeated;
+      end loop;  -- i
     end if;
   end process set_data;
 
-  new_frame <= '1' when di_lanes_data(0).octet_index = F - 1 else '0';
+  -- set output error in case any lane has an error
+  current_frame_state.user_data <= '1' when reg_state_user_data = all_ones else '0';
+  current_frame_state.invalid_characters <= '0' when reg_state_invalid_character = all_zeros else '1';
+  current_frame_state.not_enough_data <= '0' when reg_state_not_enough_data = all_zeros else '1';
+  current_frame_state.ring_buffer_overflow <= '0' when reg_state_ring_buffer_overflow = all_zeros else '1';
+  current_frame_state.disparity_error <= '0' when reg_state_disparity_error = all_zeros else '1';
+  current_frame_state.not_in_table_error <= '0' when reg_state_not_in_table_error = all_zeros else '1';
+  current_frame_state.wrong_alignment <= '0' when reg_state_wrong_alignment = all_zeros else '1';
+  current_frame_state.last_frame_repeated <= '1' when any_error = '1' else '0';
 
-  last_octet_data: for i in 0 to L-1 generate
-    current_buffered_data(L*F*8 - 1 - i*F*8 - (F - 1)*8 downto L*F*8 - 1 - i*F*8 - (F - 1)*8 - 7) <= di_lanes_data(i).d8b;
-  end generate last_octet_data;
-
-  buffered_data <= current_buffered_data or reg_buffered_data;
+  any_error <= '1' when current_frame_state.invalid_characters = '1' or
+               current_frame_state.not_enough_data = '1' or
+               current_frame_state.ring_buffer_overflow = '1' or
+               current_frame_state.disparity_error = '1' or
+               current_frame_state.not_in_table_error = '1' or
+               current_frame_state.wrong_alignment = '1' else '0';
+  next_samples_data <= samples_data when any_error = '0' else prev_samples_data;
 
   -- for one or multiple lanes if CF = 0
   -- (no control words)
@@ -108,10 +114,10 @@ begin  -- architecture a
   multi_lane_no_cf: if CF = 0 generate
     converters: for ci in 0 to M - 1 generate
       samples: for si in 0 to S - 1 generate
-        samples_data(ci, si).data <= buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn downto L*F*8 - 1 - ci*Nn*S - si*Nn - N + 1);
+        samples_data(ci, si).data <= reg_buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn downto L*F*8 - 1 - ci*Nn*S - si*Nn - N + 1);
 
         control_bits: if CS > 0 generate
-          samples_data(ci, si).ctrl_bits <= buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn - N downto L*F*8 - 1 - ci*Nn*S - si*Nn - N - CS + 1);
+          samples_data(ci, si).ctrl_bits <= reg_buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn - N downto L*F*8 - 1 - ci*Nn*S - si*Nn - N - CS + 1);
         end generate control_bits;
       end generate samples;
     end generate converters;
@@ -123,10 +129,10 @@ begin  -- architecture a
     cf_groups: for cfi in 0 to CF-1 generate
       converters: for ci in 0 to M/CF-1 generate
         samples: for si in 0 to S - 1 generate
-          samples_data(ci + cfi*M/CF, si).data <= buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn downto L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn - N + 1);
+          samples_data(ci + cfi*M/CF, si).data <= reg_buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn downto L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn - N + 1);
 
           control_bits: if CS > 0 generate
-            samples_data(ci + cfi*M/CF, si).ctrl_bits <= buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*S*Nn - ci*S*CS - si*CS downto L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*Nn*S - ci*S*CS - si*CS - CS + 1);
+            samples_data(ci + cfi*M/CF, si).ctrl_bits <= reg_buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*S*Nn - ci*S*CS - si*CS downto L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*Nn*S - ci*S*CS - si*CS - CS + 1);
           end generate control_bits;
         end generate samples;
       end generate converters;
