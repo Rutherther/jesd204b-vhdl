@@ -19,7 +19,7 @@ use work.transport_pkg.all;
 
 entity frame_alignment is
   generic (
-    SCRAMBLED : boolean; -- Whether data are scrambled
+    SCRAMBLING : std_logic; -- Whether data are scrambled
     F : integer range 0 to 256 := 8; -- Number of octets in a frame
     K : integer range 0 to 32 := 1; -- Number of frames in a multiframe
     sync_char      : std_logic_vector(7 downto 0) := "10111100";  -- K
@@ -186,7 +186,7 @@ begin  -- architecture a1
 
   is_wrong_char <= (is_f and not next_is_last_octet) or (is_a and not next_is_last_octet);
   buffer_character <= di_char.d8b when is_f = '0' and is_a = '0' else
-                 reg_last_frame_data when not SCRAMBLED else
+                 reg_last_frame_data when SCRAMBLING = '0' else
                  F_replace_data when is_f = '1' else
                  A_replace_data;
 

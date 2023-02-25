@@ -45,6 +45,7 @@ entity jesd204b_rx is
 
     di_transceiver_data : in  lane_input_array(L-1 downto 0);  -- Data from transceivers
     do_samples          : out samples_array(M - 1 downto 0, S - 1 downto 0);
+    co_frame_state      : out frame_state;
 -- Output samples
     co_correct_data     : out std_logic);  -- Whether samples are correct user
                                            -- data
@@ -55,20 +56,22 @@ architecture a1 of jesd204b_rx is
   -- outputs
   signal data_link_ready_vector : std_logic_vector(L-1 downto 0) := (others => '0');
   signal data_link_synced_vector : std_logic_vector(L-1 downto 0) := (others => '0');
-  signal data_link_chars_array : frame_character_array(0 to L-1);
+  signal data_link_aligned_chars_array : lane_character_array(0 to L-1)(F*8-1 downto 0);
+  signal data_link_frame_state_array : frame_state_array(0 to L-1);
   -- inputs
   signal data_link_start : std_logic := '0';
 
   -- == DESCRAMBLER ==
-  signal scrambler_chars_array : frame_character_array(0 to L-1);
+  -- signal scrambler_chars_array : frame_character_array(0 to L-1);
 
   -- == TRANSPORT ==
-  signal transport_chars_array : frame_character_array(0 to L-1);
+  signal transport_chars_array : lane_character_array(0 to L-1)(F*8-1 downto 0);
+  signal transport_frame_state_array : frame_state_array(0 to L-1);
 
   type lane_configs_array is array (0 to L-1) of link_config;
   signal lane_configuration_array : lane_configs_array;
 
-  signal all_ones : std_logic_vector(L-1 downto 0) := (others => '0');
+  signal all_ones : std_logic_vector(L-1 downto 0) := (others => '1');
 
   function ConfigsMatch (
     config_array : lane_configs_array)
@@ -93,40 +96,43 @@ begin  -- architecture a1
   data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
 
   -- characters either from scrambler if scrambling enabled or directly from data_link
-  transport_chars_array <= scrambler_chars_array when SCRAMBLING = '1' else data_link_chars_array;
+  -- transport_chars_array <= scrambler_chars_array when SCRAMBLING = '1' else data_link_chars_array;
+  transport_chars_array <= data_link_aligned_chars_array;
+  transport_frame_state_array <= data_link_frame_state_array;
 
   -- error '1' if configs do not match
   co_error <= not ConfigsMatch(lane_configuration_array);
 
-  data_links: for i in 0 to L-1 generate
-    data_link_layer: entity work.data_link_layer
+  data_links : for i in 0 to L-1 generate
+    data_link_layer : entity work.data_link_layer
       generic map (
-        K_character => K_character,
-        R_character => R_character,
-        A_character => A_character,
-        Q_character => Q_character,
+        K_character  => K_character,
+        R_character  => R_character,
+        A_character  => A_character,
+        Q_character  => Q_character,
         ERROR_CONFIG => ERROR_CONFIG,
-        SCRAMBLING => SCRAMBLING,
-        F => F,
-        K => K)
+        SCRAMBLING   => SCRAMBLING,
+        F            => F,
+        K            => K)
       port map (
-        ci_char_clk     => ci_char_clk,
-        ci_reset        => ci_reset,
-        do_lane_config  => lane_configuration_array(i),
-        co_lane_ready   => data_link_ready_vector(i),
-        ci_lane_start   => data_link_start,
-        ci_error_config => ERROR_CONFIG,
-        co_synced       => data_link_synced_vector(i),
-        di_10b          => di_transceiver_data(i),
-        do_char         => data_link_chars_array(i));
+        ci_char_clk      => ci_char_clk,
+        ci_frame_clk     => ci_frame_clk,
+        ci_reset         => ci_reset,
+        do_lane_config   => lane_configuration_array(i),
+        co_lane_ready    => data_link_ready_vector(i),
+        ci_lane_start    => data_link_start,
+        co_synced        => data_link_synced_vector(i),
+        di_10b           => di_transceiver_data(i),
+        do_aligned_chars => data_link_aligned_chars_array(i),
+        co_frame_state   => data_link_frame_state_array(i));
 
     scrambler_gen: if SCRAMBLING = '1' generate
-      scrambler: entity work.descrambler
-        port map (
-          ci_char_clk => ci_char_clk,
-          ci_reset    => ci_reset,
-          di_char     => data_link_chars_array(i),
-          do_char     => scrambler_chars_array(i));
+      -- scrambler: entity work.descrambler
+      --   port map (
+      --     ci_char_clk => ci_char_clk,
+      --     ci_reset    => ci_reset,
+      --     di_char     => data_link_chars_array(i),
+      --     do_char     => scrambler_chars_array(i));
     end generate scrambler_gen;
   end generate data_links;
 
@@ -141,11 +147,11 @@ begin  -- architecture a1
       N  => N,
       Nn => Nn)
     port map (
-      ci_char_clk     => ci_char_clk,
       ci_frame_clk    => ci_frame_clk,
       ci_reset        => ci_reset,
       di_lanes_data   => transport_chars_array,
-      co_correct_data => co_correct_data,
+      ci_frame_states => transport_frame_state_array,
+      co_frame_state  => co_frame_state,
       do_samples_data => do_samples);
 
 end architecture a1;
