@@ -85,7 +85,7 @@ architecture a1 of frame_alignment_tb is
 begin  -- architecture a1
   uut : entity work.frame_alignment
     generic map (
-      SCRAMBLED => false,
+      SCRAMBLING => '0',
       F         => F,
       K         => K)
     port map (
