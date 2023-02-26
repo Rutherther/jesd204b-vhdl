@@ -41,6 +41,8 @@ begin  -- architecture a1
     -- inputs : ci_clk, ci_reset
     -- outputs: read_position, write_position, buff
     read: process (ci_clk, ci_reset) is
+        variable read_from_position : integer;
+        variable read_to_position : integer;
     begin  -- process read
         if ci_reset = '0' then          -- asynchronous reset (active low)
             buff <= (others => '0');
@@ -51,9 +53,16 @@ begin  -- architecture a1
         elsif ci_clk'event and ci_clk = '1' then  -- rising clock edge
             if ci_read = '1' and size >= READ_SIZE + ci_adjust_position then
                 read_position <= (read_position + ci_adjust_position + READ_SIZE) mod BUFFER_SIZE;
-                co_read_position <= read_position + ci_adjust_position;
+                co_read_position <= (read_position + ci_adjust_position) mod BUFFER_SIZE;
                 reg_size <= size - READ_SIZE - ci_adjust_position + 1;
-                co_read <= buff_triple(2*CHARACTER_SIZE*BUFFER_SIZE - 1 - (read_position + ci_adjust_position)*CHARACTER_SIZE downto 2*CHARACTER_SIZE*BUFFER_SIZE - (read_position + ci_adjust_position + READ_SIZE)*CHARACTER_SIZE);
+
+                read_from_position := (CHARACTER_SIZE*BUFFER_SIZE - 1 - (read_position + ci_adjust_position)*CHARACTER_SIZE) mod (CHARACTER_SIZE*BUFFER_SIZE);
+                read_to_position := (CHARACTER_SIZE*BUFFER_SIZE - (read_position + ci_adjust_position + READ_SIZE)*CHARACTER_SIZE) mod (CHARACTER_SIZE*BUFFER_SIZE);
+                if read_from_position >= read_to_position then
+                    co_read <= buff(read_from_position downto read_to_position);
+                else
+                    co_read <= buff(read_from_position downto 0) & buff(CHARACTER_SIZE*BUFFER_SIZE - 1 downto read_to_position);
+                end if;
             else
                 reg_size <= reg_size + 1;
             end if;
@@ -68,9 +77,6 @@ begin  -- architecture a1
     co_size <= size;
     size <= BUFFER_SIZE when reg_size > BUFFER_SIZE else
                reg_size;
-    buff_triple(3*CHARACTER_SIZE*BUFFER_SIZE - 1 downto 2*CHARACTER_SIZE*BUFFER_SIZE) <= buff;
-    buff_triple(2*CHARACTER_SIZE*BUFFER_SIZE - 1 downto CHARACTER_SIZE*BUFFER_SIZE) <= buff;
-    buff_triple(CHARACTER_SIZE*BUFFER_SIZE - 1 downto 0) <= buff;
 
     co_filled <=  '1' when reg_size > BUFFER_SIZE else
                   '0';
