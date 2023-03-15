@@ -181,7 +181,7 @@ begin  -- architecture a1
           --  err <= '1';
           -- end if;
         end if;
-      elsif reg_multiframe_index > ci_K - 1 then
+      elsif reg_multiframe_index > 3 then
         err <= '1';
       end if;
     end if;
