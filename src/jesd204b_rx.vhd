@@ -43,8 +43,8 @@ entity jesd204b_rx is
     co_nsynced     : out std_logic;     -- Whether receiver is synced (active low)
     co_error       : out std_logic;
 
-    di_transceiver_data : in  lane_input_array(L-1 downto 0);  -- Data from transceivers
-    do_samples          : out samples_array(M - 1 downto 0, S - 1 downto 0);
+    di_transceiver_data : in  lane_input_array(0 to L-1);  -- Data from transceivers
+    do_samples          : out samples_array(0 to M - 1, 0 to S - 1);
     co_frame_state      : out frame_state;
 -- Output samples
     co_correct_data     : out std_logic);  -- Whether samples are correct user
