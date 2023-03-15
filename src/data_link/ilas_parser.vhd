@@ -186,7 +186,7 @@ begin  -- architecture a1
     end if;
   end process check_chars;
 
-  co_finished <= finished;
+  co_finished <= '1' when finished = '1' or (di_char.kout = '1' and di_char.d8b = A_character and reg_octet_index = octets_in_multiframe - 1 and reg_multiframe_index = 3) else '0';
   co_error <= '1' when err = '1' and ci_state = ILS else '0';
 
   next_processing_ilas <= '0' when ci_state = INIT or finished = '1' else
