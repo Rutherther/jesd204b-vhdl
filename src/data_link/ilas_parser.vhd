@@ -174,11 +174,12 @@ begin  -- architecture a1
         end if;
 
         if reg_octet_index = 15 then    -- This is a checksum
-          -- TODO: calculate checksum
-          if di_char.d8b = "00000000" then
-            co_wrong_chksum <=  '1';
-            err <= '1';
-          end if;
+          -- TODO: calculate checksum. Probably not necessary checksum will be
+          -- precalculated and has to be matched, we do not need to calculate it
+          -- if di_char.d8b = "00000000" then
+          --  co_wrong_chksum <=  '1';
+          --  err <= '1';
+          -- end if;
         end if;
       elsif reg_multiframe_index > ci_K - 1 then
         err <= '1';
