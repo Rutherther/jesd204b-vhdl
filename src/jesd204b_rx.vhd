@@ -38,6 +38,7 @@ entity jesd204b_rx is
     ci_char_clk  : in std_logic;        -- Character clock
     ci_frame_clk : in std_logic;        -- Frame clock
     ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
+    ci_request_sync : in std_logic;     -- Request synchronization
 
     co_lane_config : out link_config;   -- The configuration of the link
     co_nsynced     : out std_logic;     -- Whether receiver is synced (active low)
@@ -122,6 +123,7 @@ begin  -- architecture a1
         do_lane_config   => lane_configuration_array(i),
         co_lane_ready    => data_link_ready_vector(i),
         ci_lane_start    => data_link_start,
+        ci_request_sync  => ci_request_sync,
         co_synced        => data_link_synced_vector(i),
         di_10b           => di_transceiver_data(i),
         do_aligned_chars => data_link_aligned_chars_array(i),

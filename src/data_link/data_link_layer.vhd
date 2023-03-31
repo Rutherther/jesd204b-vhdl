@@ -44,6 +44,7 @@ entity data_link_layer is
     -- synchronization
     co_lane_ready : out std_logic;  -- Received /A/, waiting for lane sync
     ci_lane_start : in  std_logic;  -- Start sending data from lane buffer
+    ci_request_sync : in std_logic; -- Request resynchronization
 
     -- input, output
     co_synced        : out std_logic;  -- Whether the lane is synced
@@ -56,6 +57,8 @@ architecture a1 of data_link_layer is
   signal char_alignment_do_10b : std_logic_vector(9 downto 0);
 
   signal decoder_do_char : character_vector;
+
+  signal error_handler_co_request_sync : std_logic;
 
   signal lane_alignment_ci_realign            : std_logic := '0';
   signal lane_alignment_co_aligned            : std_logic;
@@ -95,7 +98,6 @@ begin  -- architecture a1
   -- error handling
   error_handling : entity work.error_handler
     generic map (
-      F => F)
       F => F,
       CONFIG => ERROR_CONFIG)
     port map (
@@ -109,9 +111,10 @@ begin  -- architecture a1
       ci_frame_alignment_correct_count => frame_alignment_co_correct_sync_chars,
       co_frame_alignment_realign       => frame_alignment_ci_realign,
       co_lane_alignment_realign        => lane_alignment_ci_realign,
-      co_request_sync                  => link_controller_ci_resync);
+      co_request_sync                  => error_handler_co_request_sync);
 
   -- link controller
+  link_controller_ci_resync <= error_handler_co_request_sync or ci_request_sync;
   link_controller : entity work.link_controller
     generic map (
       F => F,
