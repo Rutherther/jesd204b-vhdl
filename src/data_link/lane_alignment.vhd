@@ -47,8 +47,6 @@ architecture a1 of lane_alignment is
   type buffer_array is array (0 to buffer_size) of character_vector;
   signal buff : buffer_array := (others => ('0', '0', '0', "00000000", '0'));
 
-  signal temp_char : character_vector;
-
   signal reg_ready : std_logic := '0';
   signal reg_started : std_logic := '0';
   signal reg_error : std_logic := '0';
@@ -77,7 +75,11 @@ begin  -- architecture a1
       reg_ready             <= next_ready;
       reg_started           <= next_started;
       reg_error             <= next_error;
-      buff(reg_write_index) <= di_char;
+      buff(reg_write_index).d8b <= di_char.d8b;
+      buff(reg_write_index).kout <= di_char.kout;
+      buff(reg_write_index).disparity_error <= di_char.disparity_error;
+      buff(reg_write_index).missing_error <= di_char.missing_error;
+      buff(reg_write_index).user_data <= '1' when ci_state = DATA and reg_started = '1' else '0';
     end if;
   end process set_next;
 
@@ -102,12 +104,7 @@ begin  -- architecture a1
                 '1' when reg_ready = '1' and reg_started = '0' and (reg_write_index = 0) else
                 '0';
 
-  temp_char <= dummy_character when ci_state = INIT or reg_started = '0' else
+  do_char <= dummy_character when ci_state = INIT or reg_started = '0' else
              buff(reg_read_index);
-  do_char.d8b <= temp_char.d8b;
-  do_char.kout <= temp_char.kout;
-  do_char.disparity_error <= temp_char.disparity_error;
-  do_char.missing_error <= temp_char.missing_error;
-  do_char.user_data <= '1' when ci_state = DATA and reg_started = '1' else '0';
 
 end architecture a1;
