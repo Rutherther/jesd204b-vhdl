@@ -20,6 +20,8 @@ use work.data_link_pkg.all;
 
 entity link_controller is
   generic (
+    F : integer; -- Number of octets in a frame
+    K : integer; -- Number of frames in a multiframe
     K_character  : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
     ci_char_clk : in std_logic;         -- Character clock
@@ -27,9 +29,6 @@ entity link_controller is
     di_char : in character_vector;      -- Output character from 8b10b decoder
 
     do_config : out link_config;        -- Config found in ILAS
-
-    ci_F : in integer range 0 to 256;   -- Number of octets in a frame
-    ci_K : in integer range 0 to 32;    -- Number of frames in a multiframe
 
     ci_lane_alignment_error : in std_logic;  -- Signals a problem with lane
                                              -- alignment in this data link
@@ -71,11 +70,12 @@ architecture a1 of link_controller is
   signal ilas_unexpected_char : std_logic := '0';
 begin  -- architecture a1
   ilas: entity work.ilas_parser
+    generic map (
+      F                  => F,
+      K                  => K)
     port map (
       ci_char_clk        => ci_char_clk,
       ci_reset           => ci_reset,
-      ci_F               => ci_F,
-      ci_K               => ci_K,
       ci_state           => reg_state,
       di_char            => di_char,
       do_config          => do_config,

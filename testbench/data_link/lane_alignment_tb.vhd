@@ -65,11 +65,12 @@ architecture a1 of lane_alignment_tb is
 
 begin  -- architecture a1
   uut : entity work.lane_alignment
+    generic map (
+      F => F,
+      K => K)
     port map (
       ci_char_clk => clk,
       ci_reset    => reset,
-      ci_F        => F,
-      ci_K        => K,
       ci_start    => ci_start,
       ci_state    => ci_state,
       di_char     => di_char,

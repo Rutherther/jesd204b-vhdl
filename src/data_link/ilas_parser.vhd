@@ -14,6 +14,8 @@ use ieee.numeric_std.all;
 
 entity ilas_parser is
   generic (
+    F : integer; -- Number of octets in a frame
+    K : integer; -- Number of frames in a multiframe
     K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Character
                                                                 -- for syncing
     R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
@@ -30,9 +32,6 @@ entity ilas_parser is
   port (
     ci_char_clk        : in  std_logic;  -- Character clock
     ci_reset           : in  std_logic;  -- Reset (asynchonous, active low)
-    ci_F               : in  integer range 0 to 256;  -- Number of octets in a
-                                                      -- frame
-    ci_K               : in  integer range 0 to 32;  -- Number of frames in a multiframe
     ci_state           : in  link_state;  -- State of the lane
     di_char            : in  character_vector;  -- Character from 8b10b decoder
     do_config          : out link_config;  -- Config found in ILAS
@@ -90,7 +89,7 @@ architecture a1 of ilas_parser is
     return data(up_index - 7 + bit_index);
   end function getBitByIndex;
 begin  -- architecture a1
-  octets_in_multiframe <= ci_F * CI_K;
+  octets_in_multiframe <= F * K;
   -- ILAS
     -- one multiframe is sent
     -- 4 frames in a multiframe

@@ -216,11 +216,12 @@ architecture a1 of link_controller_tb is
 
 begin  -- architecture a1
   uut : entity work.link_controller
+    generic map (
+      F => F,
+      K => K)
     port map (
       ci_char_clk                => clk,
       ci_reset                   => reset,
-      ci_F                       => F,
-      ci_K                       => K,
       ci_resync                  => ci_resync,
       ci_lane_alignment_aligned  => ci_lane_alignment_aligned,
       ci_lane_alignment_error    => ci_lane_alignment_error,

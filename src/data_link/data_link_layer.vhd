@@ -94,11 +94,12 @@ begin  -- architecture a1
 
   -- error handling
   error_handling : entity work.error_handler
+    generic map (
+      F => F)
     port map (
       ci_char_clk                      => ci_char_clk,
       ci_reset                         => ci_reset,
       ci_state                         => link_controller_co_state,
-      ci_F                             => F,
       di_char                          => decoder_do_char,
       ci_config                        => ERROR_CONFIG,
       ci_lane_alignment_error          => lane_alignment_co_error,
@@ -111,12 +112,13 @@ begin  -- architecture a1
 
   -- link controller
   link_controller : entity work.link_controller
+    generic map (
+      F => F,
+      K => K)
     port map (
       ci_char_clk                => ci_char_clk,
       ci_reset                   => ci_reset,
       ci_resync                  => link_controller_ci_resync,
-      ci_F                       => F,
-      ci_K                       => K,
       ci_lane_alignment_error    => lane_alignment_co_error,
       ci_lane_alignment_aligned  => lane_alignment_co_aligned,
       ci_lane_alignment_ready    => lane_alignment_co_ready,
@@ -146,11 +148,12 @@ begin  -- architecture a1
 
   -- lane alignment
   lane_alignment : entity work.lane_alignment
+    generic map (
+      F => F,
+      K => K)
     port map (
       ci_char_clk           => ci_char_clk,
       ci_reset              => ci_reset,
-      ci_F                  => F,
-      ci_K                  => K,
       ci_state              => link_controller_co_state,
       ci_realign            => lane_alignment_ci_realign,
       co_ready              => lane_alignment_co_ready,
@@ -164,7 +167,7 @@ begin  -- architecture a1
     generic map (
       SCRAMBLING => SCRAMBLING,
       F          => F,
-      K          => K)
+      K         => K)
     port map (
       ci_char_clk           => ci_char_clk,
       ci_frame_clk          => ci_frame_clk,

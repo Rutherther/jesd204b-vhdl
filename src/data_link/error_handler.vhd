@@ -79,7 +79,7 @@ begin  -- architecture a1
   co_request_sync <= reg_request_sync;
   active <= '1' when di_char.user_data = '1' and ci_state /= INIT else '0';
   next_index <= 0 when active = '0' else
-                (reg_index + 1) mod ci_F;
+                (reg_index + 1) mod F;
 
   next_request_sync <= '0' when active = '0' else
                        '1' when reg_request_sync = '1' else

@@ -15,6 +15,8 @@ use work.data_link_pkg.all;
 
 entity lane_alignment is
   generic (
+    F : integer; -- Number of octets in a frame
+    K : integer; -- Number of frames in a multiframe
     buffer_size     : integer          := 256;  -- How many octets to keep
     alignment_character : std_logic_vector(7 downto 0) := "01111100";  -- The K
                                                                        --
@@ -30,10 +32,6 @@ entity lane_alignment is
     ci_state              : in  link_state;  -- State of the lane
     ci_realign            : in  std_logic;  -- Whether to realign to the last
                                             -- found alignment character
-    ci_F                  : in  integer range 0 to 256;  -- Number of octets in
-                                                         -- a frame
-    ci_K                  : in  integer range 0 to 32;  -- Number of frames in
-                                                        -- a multiframe
     di_char               : in  character_vector;  -- Character from 8b10b decoder
     co_ready              : out std_logic;  -- Whether /A/ was received and
                                             -- waiting for start

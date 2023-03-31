@@ -249,11 +249,12 @@ architecture a1 of ilas_parser_tb is
 
 begin  -- architecture a1
   uut: entity work.ilas_parser
+    generic map (
+      F => F,
+      K => K)
     port map (
       ci_char_clk => clk,
       ci_reset    => reset,
-      ci_F        => F,
-      ci_K        => K,
       ci_state    =>  ci_state,
       di_char     => di_char,
       do_config   => do_config,
