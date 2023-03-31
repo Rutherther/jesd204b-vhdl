@@ -96,12 +96,13 @@ begin  -- architecture a1
   error_handling : entity work.error_handler
     generic map (
       F => F)
+      F => F,
+      CONFIG => ERROR_CONFIG)
     port map (
       ci_char_clk                      => ci_char_clk,
       ci_reset                         => ci_reset,
       ci_state                         => link_controller_co_state,
       di_char                          => decoder_do_char,
-      ci_config                        => ERROR_CONFIG,
       ci_lane_alignment_error          => lane_alignment_co_error,
       ci_frame_alignment_error         => frame_alignment_co_error,
       ci_lane_alignment_correct_count  => lane_alignment_co_correct_sync_chars,

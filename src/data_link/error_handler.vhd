@@ -13,20 +13,19 @@ use ieee.std_logic_1164.all;
 use work.data_link_pkg.all;
 
 entity error_handler is
+  generic (
+    CONFIG : error_handling_config; -- Configuration of error handling
+    F : integer; -- Number of octets in a frame
+    K : integer); -- Number of frames in a multiframe
   port (
     ci_char_clk                      : in  std_logic;  -- Character clock
     ci_reset                         : in  std_logic;  -- Reset (asynchronous,
                                                        -- active low)
     ci_state                         : in link_state;  -- State of the lane.
 
-    ci_F : in integer range 0 to 256;
-
     di_char                          : in  character_vector;  -- Character from
                                                               -- 8b10b decoder
 
-    ci_config                        : in  error_handling_config;  --
-                                                                   --Configuration
-                                                                   --of error handling
     ci_lane_alignment_error          : in  std_logic;  -- Signals an error with
                                                        -- lane alignment
     ci_lane_alignment_correct_count  : in  integer;  -- Signals number of
@@ -79,15 +78,15 @@ begin  -- architecture a1
   co_request_sync <= reg_request_sync;
   active <= '1' when di_char.user_data = '1' and ci_state /= INIT else '0';
   next_index <= 0 when active = '0' else
-                (reg_index + 1) mod F;
+                (reg_index + 1) mod K*F;
 
   next_request_sync <= '0' when active = '0' else
                        '1' when reg_request_sync = '1' else
-                       '1' when ci_lane_alignment_correct_count >= ci_config.lane_alignment_realign_after else
-                       '1' when ci_frame_alignment_correct_count >= ci_config.frame_alignment_realign_after else
-                       '1' when reg_missing_count > ci_config.tolerate_missing_in_frame else
-                       '1' when reg_disparity_count > ci_config.tolerate_disparity_in_frame else
-                       '1' when reg_unexpected_count > ci_config.tolerate_unexpected_characters_in_frame else
+                       '1' when ci_lane_alignment_correct_count >= CONFIG.lane_alignment_realign_after else
+                       '1' when ci_frame_alignment_correct_count >= CONFIG.frame_alignment_realign_after else
+                       '1' when reg_missing_count > CONFIG.tolerate_missing_in_frame else
+                       '1' when reg_disparity_count > CONFIG.tolerate_disparity_in_frame else
+                       '1' when reg_unexpected_count > CONFIG.tolerate_unexpected_characters_in_frame else
                        '0';
 
   next_missing_count <= 0 when next_index = 0 else
