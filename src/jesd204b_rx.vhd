@@ -62,7 +62,7 @@ architecture a1 of jesd204b_rx is
   signal data_link_start : std_logic := '0';
 
   -- == DESCRAMBLER ==
-  -- signal scrambler_chars_array : frame_character_array(0 to L-1);
+  signal descrambler_aligned_chars_array : lane_character_array(0 to L-1)(F*8-1 downto 0);
 
   -- == TRANSPORT ==
   signal transport_chars_array : lane_character_array(0 to L-1)(F*8-1 downto 0);
@@ -96,9 +96,10 @@ begin  -- architecture a1
   data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
 
   -- characters either from scrambler if scrambling enabled or directly from data_link
-  -- transport_chars_array <= scrambler_chars_array when SCRAMBLING = '1' else data_link_chars_array;
-  transport_chars_array <= data_link_aligned_chars_array;
-  transport_frame_state_array <= data_link_frame_state_array;
+  transport_chars_array <= scrambler_aligned_chars_array when SCRAMBLING = '1' else data_link_aligned_chars_array;
+  transport_frame_state_array <= data_link_frame_state_array; -- TODO: buffer
+                                                              -- frame_state if
+                                                              -- scrambling
 
   -- error '1' if configs do not match
   co_error <= not ConfigsMatch(lane_configuration_array);
@@ -127,12 +128,14 @@ begin  -- architecture a1
         co_frame_state   => data_link_frame_state_array(i));
 
     scrambler_gen: if SCRAMBLING = '1' generate
-      -- scrambler: entity work.descrambler
-      --   port map (
-      --     ci_char_clk => ci_char_clk,
-      --     ci_reset    => ci_reset,
-      --     di_char     => data_link_chars_array(i),
-      --     do_char     => scrambler_chars_array(i));
+      scrambler: entity work.descrambler
+        generic map (
+          F => F)
+        port map (
+          ci_frame_clk => ci_frame_clk,
+          ci_reset    => ci_reset,
+          di_char     => data_link_aligned_chars_array(i),
+          do_char     => descrambler_aligned_chars_array(i));
     end generate scrambler_gen;
   end generate data_links;
 
