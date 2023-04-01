@@ -23,12 +23,12 @@ entity jesd204b_link_rx is
     Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
     ADJCNT       : integer                      := 0;
-    ADJDIR       : integer                      := 0;
+    ADJDIR       : std_logic                    := '0';
     BID          : integer                      := 0;
     DID          : integer                      := 0;
     HD           : std_logic                    := '0';
     JESDV        : integer                      := 1;
-    PHADJ        : integer                      := 0;
+    PHADJ        : std_logic                    := '0';
     SUBCLASSV    : integer                      := 0;
     K            : integer;             -- Number of frames in a
                                         -- multiframe
@@ -60,8 +60,6 @@ entity jesd204b_link_rx is
 end entity jesd204b_link_rx;
 
 architecture a1 of jesd204b_link_rx is
-  constant link_config : link_config :=
-    (ADJCNT, ADJDIR, BID, CF, CS, DID, F, HD, JESDV, K, L, LID, M, N, Nn, PHADJ, S, SCRAMBLING, SUBCLASSV, RES1, RES2, X, 0);
   -- == DATA LINK ==
   -- outputs
   signal data_link_ready_vector : std_logic_vector(L-1 downto 0) := (others => '0');
@@ -89,25 +87,25 @@ architecture a1 of jesd204b_link_rx is
     variable matches : std_logic := '1';
   begin  -- function ConfigsMatch
     for i in 0 to L-2 loop
-      if config_array(i).ADJCNT /= link_config.ADJCNT or
+      if config_array(i).ADJCNT /= ADJCNT or
         config_array(i).LID /= i or
-        config_array(i).ADJDIR /= link_config.ADJDIR or
-        config_array(i).BID /= link_config.BID or
-        config_array(i).CF /= link_config.CF or
-        config_array(i).CS /= link_config.CS or
-        config_array(i).DID /= link_config.DID or
-        config_array(i).F /= link_config.F or
-        config_array(i).HD /= link_config.HD or
-        config_array(i).JESDV /= link_config.JESDV or
-        config_array(i).K /= link_config.K or
-        config_array(i).L /= link_config.L or
-        config_array(i).M /= link_config.M or
-        config_array(i).N /= link_config.N or
-        config_array(i).Nn /= link_config.Nn or
-        config_array(i).PHADJ /= link_config.PHADJ or
-        config_array(i).S /= link_config.S or
-        config_array(i).SCR /= link_config.SCR or
-        config_array(i).SUBCLASSV /= link_config.SUBCLASSV
+        config_array(i).ADJDIR /= ADJDIR or
+        config_array(i).BID /= BID or
+        config_array(i).CF /= CF or
+        config_array(i).CS /= CS or
+        config_array(i).DID /= DID or
+        config_array(i).F /= F or
+        config_array(i).HD /= HD or
+        config_array(i).JESDV /= JESDV or
+        config_array(i).K /= K or
+        config_array(i).L /= L or
+        config_array(i).M /= M or
+        config_array(i).N /= N or
+        config_array(i).Nn /= Nn or
+        config_array(i).PHADJ /= PHADJ or
+        config_array(i).S /= S or
+        config_array(i).SCR /= SCRAMBLING or
+        config_array(i).SUBCLASSV /= SUBCLASSV
       then
         matches := '0';
       end if;
@@ -118,20 +116,19 @@ architecture a1 of jesd204b_link_rx is
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready
   co_nsynced <= '0' when data_link_synced_vector = all_ones else '1';
-  -- choose the first config.
-  co_lane_config <= lane_configuration_array(0);
 
   -- start lanes data after all are ready
   data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
 
   -- characters either from scrambler if scrambling enabled or directly from data_link
-  transport_chars_array <= scrambler_aligned_chars_array when SCRAMBLING = '1' else data_link_aligned_chars_array;
+  transport_chars_array <= descrambler_aligned_chars_array when SCRAMBLING = '1' else data_link_aligned_chars_array;
   transport_frame_state_array <= data_link_frame_state_array; -- TODO: buffer
                                                               -- frame_state if
                                                               -- scrambling
 
   -- error '1' if configs do not match
   co_error <= not ConfigsMatch(lane_configuration_array);
+  co_correct_data <= co_frame_state.user_data;
 
   data_links : for i in 0 to L-1 generate
     data_link_layer : entity work.data_link_layer
@@ -157,16 +154,16 @@ begin  -- architecture a1
         do_aligned_chars => data_link_aligned_chars_array(i),
         co_frame_state   => data_link_frame_state_array(i));
 
-    scrambler_gen: if SCRAMBLING = '1' generate
-      scrambler: entity work.descrambler
+    descrambler_gen: if SCRAMBLING = '1' generate
+      descrambler: entity work.descrambler
         generic map (
           F => F)
         port map (
           ci_frame_clk => ci_frame_clk,
           ci_reset    => ci_reset,
-          di_char     => data_link_aligned_chars_array(i),
-          do_char     => descrambler_aligned_chars_array(i));
-    end generate scrambler_gen;
+          di_data     => data_link_aligned_chars_array(i),
+          do_data     => descrambler_aligned_chars_array(i));
+    end generate descrambler_gen;
   end generate data_links;
 
   transport_layer : entity work.transport_layer

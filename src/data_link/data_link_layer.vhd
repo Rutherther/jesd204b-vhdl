@@ -98,7 +98,8 @@ begin  -- architecture a1
   -- error handling
   error_handling : entity work.error_handler
     generic map (
-      F => F,
+      K      => K,
+      F      => F,
       CONFIG => ERROR_CONFIG)
     port map (
       ci_char_clk                      => ci_char_clk,

@@ -17,11 +17,11 @@ end entity descrambler;
 -- in JESD204 specification Annex D
 architecture a1 of descrambler is
 begin  -- architecture a1
-  set_next: process (ci_char_clk, ci_reset) is
+  set_next: process (ci_frame_clk, ci_reset) is
   begin  -- process set_next
     if ci_reset = '0' then              -- asynchronous reset (active low)
       do_data <= (others => '0');
-    elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
+    elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
       do_data <= di_data; -- TODO: implement the descrambler...
     end if;
   end process set_next;
