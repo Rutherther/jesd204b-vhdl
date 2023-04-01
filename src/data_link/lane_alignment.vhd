@@ -18,9 +18,7 @@ entity lane_alignment is
     F : integer; -- Number of octets in a frame
     K : integer; -- Number of frames in a multiframe
     buffer_size     : integer          := 256;  -- How many octets to keep
-    alignment_character : std_logic_vector(7 downto 0) := "01111100";  -- The K
-                                                                       --
-                                                                       --alignment character
+    R_character : std_logic_vector(7 downto 0) := "00011100";  -- The /R/ character
     dummy_character : character_vector := ('1', '0', '0', "10111100", '0'));
 -- Character to send before the buffer is ready and started
 
@@ -93,10 +91,10 @@ begin  -- architecture a1
                      0;
 
   next_ready <= '0' when ci_state = INIT else
-                '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = alignment_character and (ci_state = CGS or ci_state = ILS)) else
+                '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = R_character and (ci_state = CGS or ci_state = ILS)) else
                 '0';
   next_started <= '0' when reg_ready = '0' else
-                  '1' when reg_ready = '1' and (ci_start = '1' or reg_started = '1') else
+                  '1' when (ci_start = '1' or reg_started = '1') else
                   '0';
   co_aligned <= reg_started;            -- TODO: check for misalignment
   next_error <= '0' when ci_state = INIT else
