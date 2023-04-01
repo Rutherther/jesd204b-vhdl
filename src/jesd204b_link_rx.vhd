@@ -83,6 +83,37 @@ architecture a1 of jesd204b_link_rx is
 
   signal all_ones : std_logic_vector(L-1 downto 0) := (others => '1');
 
+  function ConfigsMatch (
+    config_array : lane_configs_array)
+    return std_logic is
+    variable matches : std_logic := '1';
+  begin  -- function ConfigsMatch
+    for i in 0 to L-2 loop
+      if config_array(i).ADJCNT /= link_config.ADJCNT or
+        config_array(i).LID /= i or
+        config_array(i).ADJDIR /= link_config.ADJDIR or
+        config_array(i).BID /= link_config.BID or
+        config_array(i).CF /= link_config.CF or
+        config_array(i).CS /= link_config.CS or
+        config_array(i).DID /= link_config.DID or
+        config_array(i).F /= link_config.F or
+        config_array(i).HD /= link_config.HD or
+        config_array(i).JESDV /= link_config.JESDV or
+        config_array(i).K /= link_config.K or
+        config_array(i).L /= link_config.L or
+        config_array(i).M /= link_config.M or
+        config_array(i).N /= link_config.N or
+        config_array(i).Nn /= link_config.Nn or
+        config_array(i).PHADJ /= link_config.PHADJ or
+        config_array(i).S /= link_config.S or
+        config_array(i).SCR /= link_config.SCR or
+        config_array(i).SUBCLASSV /= link_config.SUBCLASSV
+      then
+        matches := '0';
+      end if;
+
+      return matches;
+    end loop;  -- i
   end function ConfigsMatch;
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready
