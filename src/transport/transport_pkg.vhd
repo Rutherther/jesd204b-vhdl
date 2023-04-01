@@ -35,5 +35,6 @@ package transport_pkg is
 
   -- Array of samples in one frame by converter and by sample (used with oversampling)
   type samples_array is array (natural range <>, natural range <>) of sample;
+  type simple_samples_array is array (natural range <>) of samples_array;
 
 end package transport_pkg;
