@@ -75,7 +75,6 @@ architecture a1 of jesd204b_rx_kchars_tb is
 
   signal test_vec_index : integer := 0;
 
-  signal co_lane_config : link_config;
   signal co_nsynced : std_logic;
   signal co_error : std_logic;
   signal do_samples : samples_array (M-1 downto 0, S-1 downto 0)
@@ -98,8 +97,8 @@ begin  -- architecture a1
       ci_char_clk         => char_clk,
       ci_frame_clk        => frame_clk,
       ci_reset            => reset,
+      ci_request_sync     => '0',
       di_transceiver_data => di_transceiver_data,
-      co_lane_config      => co_lane_config,
       co_nsynced          => co_nsynced,
       co_error            => co_error,
       do_samples          => do_samples,
