@@ -120,6 +120,7 @@ begin  -- architecture a1
       F => F,
       K => K)
     port map (
+      ci_frame_clk               => ci_frame_clk,
       ci_char_clk                => ci_char_clk,
       ci_reset                   => ci_reset,
       ci_resync                  => link_controller_ci_resync,

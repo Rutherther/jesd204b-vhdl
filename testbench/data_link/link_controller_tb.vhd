@@ -187,12 +187,14 @@ architecture a1 of link_controller_tb is
     (('0', '0', '0', "00000000", '0'), '0', '0', '0', '0', '0', '0', '0', INIT, '0', '0', -1)
   );
 
-  constant clk_period : time := 1 ns;
+  constant char_clk_period : time := 1 ns;
+  constant frame_clk_period : time := char_clk_period * F;
 
   constant F : integer range 0 to 256 := 17;
   constant K : integer range 0 to 32 := 1;
 
-  signal clk : std_logic := '0';
+  signal char_clk : std_logic := '0';
+  signal frame_clk : std_logic := '0';
   signal reset : std_logic := '0';
 
   signal di_char : character_vector;
@@ -220,7 +222,8 @@ begin  -- architecture a1
       F => F,
       K => K)
     port map (
-      ci_char_clk                => clk,
+      ci_frame_clk               => frame_clk,
+      ci_char_clk                => char_clk,
       ci_reset                   => reset,
       ci_resync                  => ci_resync,
       ci_lane_alignment_aligned  => ci_lane_alignment_aligned,
@@ -236,15 +239,20 @@ begin  -- architecture a1
       co_error                   => co_error
       );
 
-  clk_gen: process is
+  char_clk_gen: process is
   begin -- process clk_gen
-    wait for clk_period/2;
-	 clk <= not clk;
-  end process clk_gen;
+    wait for char_clk_period/2;
+	  char_clk <= not char_clk;
+  end process char_clk_gen;
+  frame_clk_gen: process is
+  begin -- process clk_gen
+    wait for frame_clk_period/2;
+	  frame_clk <= not clk;
+  end process frame_clk_gen;
   
   reset_gen: process is
   begin -- process reset_gen
-    wait for clk_period*2;
+    wait for char_clk_period*2;
     reset <= '1';
   end process reset_gen;
 
@@ -252,7 +260,7 @@ begin  -- architecture a1
     variable test_vec : test_vector;
     variable prev_test_vec : test_vector;
   begin  -- process test
-    wait for clk_period*2;
+    wait for char_clk_period*2;
 
     for i in test_vectors'range loop
       test_data_index <= i;
@@ -278,7 +286,7 @@ begin  -- architecture a1
         assert co_uncorrectable_error = prev_test_vec.expected_uncorrectable_error report "The uncorrectable error does not match. Index: " & integer'image(i-1) severity error;
       end if;
 
-      wait for clk_period;
+      wait for char_clk_period;
     end loop;  -- i
     wait for 100 ms;
   end process test;
