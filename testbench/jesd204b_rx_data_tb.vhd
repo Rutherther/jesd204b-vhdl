@@ -147,7 +147,7 @@ architecture a1 of jesd204b_rx_data_tb is
   signal co_correct_data : std_logic;
 
 begin  -- architecture a1
-  uut : entity work.jesd204b_rx
+  uut : entity work.jesd204b_link_rx
     generic map (
       K  => K,
       CS => CS,

@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- Title      : JESD204B receiver
 -------------------------------------------------------------------------------
--- File       : jesd204b_rx.vhd
+-- File       : jesd204b_link_rx.vhd
 -------------------------------------------------------------------------------
 -- Description: A top level entity for a JESD204B receiver.
 -- Holds data_link and transport_layers.
@@ -13,36 +13,43 @@ use work.transport_pkg.all;
 use work.data_link_pkg.all;
 use work.jesd204b_pkg.all;
 
-entity jesd204b_rx is
+entity jesd204b_link_rx is
   generic (
     K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
     R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
-                                                                -- frame character
+                                        -- frame character
     A_character  : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
-                                                                -- alignment character
+                                        -- alignment character
     Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
-                                                                -- frame 2nd character
-    K            : integer                      := 1;  -- Number of frames in a
-                                                       -- multiframe
-    CS           : integer                      := 1;  -- Number of control bits per sample
-    M            : integer                      := 1;  -- Number of converters
-    S            : integer                      := 1;  -- Number of samples
-    L            : integer                      := 1;  -- Number of lanes
-    F            : integer                      := 2;  -- Number of octets in a frame
-    CF           : integer                      := 0;  -- Number of control words
-    N            : integer                      := 12;  -- Size of a sample
-    Nn           : integer                      := 16;  -- Size of a word (sample + ctrl if CF
+                                        -- frame 2nd character
+    ADJCNT       : integer                      := 0;
+    ADJDIR       : integer                      := 0;
+    BID          : integer                      := 0;
+    DID          : integer                      := 0;
+    HD           : std_logic                    := '0';
+    JESDV        : integer                      := 1;
+    PHADJ        : integer                      := 0;
+    SUBCLASSV    : integer                      := 0;
+    K            : integer;             -- Number of frames in a
+                                        -- multiframe
+    CS           : integer;             -- Number of control bits per sample
+    M            : integer;             -- Number of converters
+    S            : integer;             -- Number of samples
+    L            : integer;             -- Number of lanes
+    F            : integer;             -- Number of octets in a frame
+    CF           : integer;             -- Number of control words
+    N            : integer;             -- Size of a sample
+    Nn           : integer;             -- Size of a word (sample + ctrl if CF
     ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);
     SCRAMBLING   : std_logic                    := '0');
   port (
-    ci_char_clk  : in std_logic;        -- Character clock
-    ci_frame_clk : in std_logic;        -- Frame clock
-    ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
+    ci_char_clk     : in std_logic;     -- Character clock
+    ci_frame_clk    : in std_logic;     -- Frame clock
+    ci_reset        : in std_logic;     -- Reset (asynchronous, active low)
     ci_request_sync : in std_logic;     -- Request synchronization
 
-    co_lane_config : out link_config;   -- The configuration of the link
-    co_nsynced     : out std_logic;     -- Whether receiver is synced (active low)
-    co_error       : out std_logic;
+    co_nsynced : out std_logic;  -- Whether receiver is synced (active low)
+    co_error   : out std_logic;
 
     di_transceiver_data : in  lane_input_array(0 to L-1);  -- Data from transceivers
     do_samples          : out samples_array(0 to M - 1, 0 to S - 1);
@@ -50,9 +57,11 @@ entity jesd204b_rx is
 -- Output samples
     co_correct_data     : out std_logic);  -- Whether samples are correct user
                                            -- data
-end entity jesd204b_rx;
+end entity jesd204b_link_rx;
 
-architecture a1 of jesd204b_rx is
+architecture a1 of jesd204b_link_rx is
+  constant link_config : link_config :=
+    (ADJCNT, ADJDIR, BID, CF, CS, DID, F, HD, JESDV, K, L, LID, M, N, Nn, PHADJ, S, SCRAMBLING, SUBCLASSV, RES1, RES2, X, 0);
   -- == DATA LINK ==
   -- outputs
   signal data_link_ready_vector : std_logic_vector(L-1 downto 0) := (others => '0');
@@ -74,18 +83,6 @@ architecture a1 of jesd204b_rx is
 
   signal all_ones : std_logic_vector(L-1 downto 0) := (others => '1');
 
-  function ConfigsMatch (
-    config_array : lane_configs_array)
-    return std_logic is
-    variable matches : std_logic := '1';
-  begin  -- function ConfigsMatch
-    for i in 0 to L-2 loop
-      if config_array(i) /= config_array(i+1) then
-        matches := '0';
-      end if;
-
-      return matches;
-    end loop;  -- i
   end function ConfigsMatch;
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready
