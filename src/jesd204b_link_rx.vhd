@@ -40,7 +40,7 @@ entity jesd204b_link_rx is
     CF              : integer range 0 to 32;  -- Number of control words
     N               : integer range 1 to 32;  -- Size of a sample
     Nn              : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
-    RX_BUFFER_DELAY : integer range 1 to 32        := 0;
+    RX_BUFFER_DELAY : integer range 1 to 32        := 1;
     ERROR_CONFIG    : error_handling_config        := (2, 0, 5, 5, 5);
     SCRAMBLING      : std_logic                    := '0');
   port (
