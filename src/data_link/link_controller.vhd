@@ -149,7 +149,7 @@ begin  -- architecture a1
     begin
       if ci_reset = '0' then
         co_synced <= '0';
-      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then
+      elsif ci_multiframe_clk'event and ci_multiframe_clk = '0' then
         co_synced <= synced;
       end if;
     end process set_synced;
