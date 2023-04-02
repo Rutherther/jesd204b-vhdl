@@ -7,22 +7,28 @@ use work.transport_pkg.all;
 entity jesd204b_multipoint_link_rx is
 
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_character          : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_character          : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_character          : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    Q_character          : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    DEVICE_CLK_FREQUENCY : integer;
+    DATA_RATE_MULT       : integer;     -- DEVICE_CLK_FREQ*this is lane bit rate
                                         -- frame 2nd character
-    LINKS        : integer;             -- Count of links
-    LANES        : integer;             -- Total nubmer of lanes
-    CONVERTERS   : integer;             -- Total number of converters
-    CONFIG       : link_config_array(0 to LINKS - 1);
-    ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5));
+    MULTIFRAME_RATE      : integer;     -- F * K, should be the same for every
+                                        -- device
+    LINKS                : integer;     -- Count of links
+    LANES                : integer;     -- Total nubmer of lanes
+    CONVERTERS           : integer;     -- Total number of converters
+    CONFIG               : link_config_array(0 to LINKS - 1);
+    ERROR_CONFIG         : error_handling_config        := (2, 0, 5, 5, 5));
 
   port (
-    ci_char_clk          : in  std_logic;
-    ci_frame_clk          : in  std_logic;
+    ci_device_clk       : in  std_logic;
+    ci_char_clk         : in  std_logic;
+    ci_frame_clk        : in  std_logic;
+    ci_sysref           : in  std_logic;
     ci_reset            : in  std_logic;
     ci_request_sync     : in  std_logic;
     co_nsynced          : out std_logic;
@@ -41,6 +47,9 @@ architecture a1 of jesd204b_multipoint_link_rx is
   signal links_correct_data : std_logic_vector(LINKS - 1 downto 0);
   signal links_error : std_logic_vector(LINKS - 1 downto 0);
   signal links_nsynced : std_logic_vector(LINKS - 1 downto 0);
+
+  signal multiframe_clk : std_logic;
+  signal nsynced : std_logic;
 
   -- purpose: Count lanes before link with index link_index
   function sumCummulativeLanes (
@@ -72,9 +81,23 @@ architecture a1 of jesd204b_multipoint_link_rx is
     return converters_count;
   end function sumCummulativeConverters;
 begin  -- architecture a1
-  co_nsynced <= '0' when links_nsynced = all_zeros else '1';
+  nsynced <= '0' when links_nsynced = all_zeros else '1';
+
+  co_nsynced <= nsynced;
   co_error <= '0' when links_error = all_zeros else '1';
   co_correct_data <= '1' when links_correct_data = all_ones else '0';
+
+  multiframe_gen: entity work.lmfc_counter
+    generic map (
+      DATA_RATE_MULT  => DATA_RATE_MULT,
+      PHASE_ADJUST    => 0,
+      MULTIFRAME_RATE => MULTIFRAME_RATE)
+    port map (
+      ci_device_clk     => ci_device_clk,
+      ci_reset          => ci_reset,
+      ci_sysref         => ci_sysref,
+      ci_enable_sync    => nsynced,
+      co_multiframe_clk => multiframe_clk);
 
   links_rx: for i in 0 to LINKS - 1 generate
     link: entity work.jesd204b_link_rx
@@ -104,6 +127,7 @@ begin  -- architecture a1
     port map (
       ci_char_clk         => ci_char_clk,
       ci_frame_clk        => ci_frame_clk,
+      ci_multiframe_clk   => multiframe_clk,
       ci_reset            => ci_reset,
       ci_request_sync     => ci_request_sync,
       co_nsynced          => links_nsynced(i),

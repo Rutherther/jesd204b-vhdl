@@ -15,38 +15,40 @@ use work.jesd204b_pkg.all;
 
 entity jesd204b_link_rx is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_character     : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_character     : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_character     : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    Q_character     : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
-    ADJCNT       : integer range 0 to 15        := 0;
-    ADJDIR       : std_logic                    := '0';
-    BID          : integer range 0 to 15        := 0;
-    DID          : integer range 0 to 255       := 0;
-    HD           : std_logic                    := '0';
-    JESDV        : integer range 0 to 7         := 1;
-    PHADJ        : std_logic                    := '0';
-    SUBCLASSV    : integer range 0 to 7         := 0;
-    K            : integer range 1 to 32;  -- Number of frames in a
-                                           -- multiframe
-    CS           : integer range 0 to 3;   -- Number of control bits per sample
-    M            : integer range 1 to 256;  -- Number of converters
-    S            : integer range 1 to 32;  -- Number of samples
-    L            : integer range 1 to 32;  -- Number of lanes
-    F            : integer range 1 to 256;  -- Number of octets in a frame
-    CF           : integer range 0 to 32;  -- Number of control words
-    N            : integer range 1 to 32;  -- Size of a sample
-    Nn           : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
-    ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);
-    SCRAMBLING   : std_logic                    := '0');
+    ADJCNT          : integer range 0 to 15        := 0;
+    ADJDIR          : std_logic                    := '0';
+    BID             : integer range 0 to 15        := 0;
+    DID             : integer range 0 to 255       := 0;
+    HD              : std_logic                    := '0';
+    JESDV           : integer range 0 to 7         := 1;
+    PHADJ           : std_logic                    := '0';
+    SUBCLASSV       : integer range 0 to 7         := 0;
+    K               : integer range 1 to 32;  -- Number of frames in a
+                                              -- multiframe
+    CS              : integer range 0 to 3;  -- Number of control bits per sample
+    M               : integer range 1 to 256;  -- Number of converters
+    S               : integer range 1 to 32;  -- Number of samples
+    L               : integer range 1 to 32;  -- Number of lanes
+    F               : integer range 1 to 256;  -- Number of octets in a frame
+    CF              : integer range 0 to 32;  -- Number of control words
+    N               : integer range 1 to 32;  -- Size of a sample
+    Nn              : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
+    RX_BUFFER_DELAY : integer range 1 to 32        := 0;
+    ERROR_CONFIG    : error_handling_config        := (2, 0, 5, 5, 5);
+    SCRAMBLING      : std_logic                    := '0');
   port (
-    ci_char_clk     : in std_logic;     -- Character clock
-    ci_frame_clk    : in std_logic;     -- Frame clock
-    ci_reset        : in std_logic;     -- Reset (asynchronous, active low)
-    ci_request_sync : in std_logic;     -- Request synchronization
+    ci_char_clk       : in std_logic;   -- Character clock
+    ci_frame_clk      : in std_logic;   -- Frame clock
+    ci_multiframe_clk : in std_logic;  -- Mutliframe clock (subclass 1, 2 only)
+    ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
+    ci_request_sync   : in std_logic;   -- Request synchronization
 
     co_nsynced : out std_logic;  -- Whether receiver is synced (active low)
     co_error   : out std_logic;
@@ -67,6 +69,9 @@ architecture a1 of jesd204b_link_rx is
   signal data_link_frame_state_array : frame_state_array(0 to L-1);
   -- inputs
   signal data_link_start : std_logic := '0';
+
+  -- subclass 1 support
+  signal frame_index : integer;
 
   -- == DESCRAMBLER ==
   signal descrambler_aligned_chars_array : lane_character_array(0 to L-1)(F*8-1 downto 0);
@@ -117,7 +122,34 @@ begin  -- architecture a1
   co_nsynced <= '0' when data_link_synced_vector = all_ones else '1';
 
   -- start lanes data after all are ready
-  data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
+  start_lanes_subclass_0: if SUBCLASSV = 0 generate
+    data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
+  end generate start_lanes_subclass_0;
+
+  start_lanes_subclass_1: if SUBCLASSV = 0 generate
+    set_frame_index: process (ci_frame_clk, ci_multiframe_clk, ci_reset) is
+    begin  -- process set_frame_idnex
+      if ci_reset = '0' then            -- asynchronous reset (active low)
+        frame_index <= 0;
+      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then  -- rising clock edge
+        frame_index <= 0;
+      elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
+        frame_index <= frame_index + 1;
+      end if;
+    end process set_frame_index;
+
+    -- let all lanes start at RX_BUFFER_DELAY frames after multiframe clock
+    -- only if all data links are ready.
+    -- Note that this is not 100% standard respecting implementation.
+    -- The lanes should be freed after defined LMFC after synced is asserted,
+    -- but this is much easier. And provided that the presupposition that
+    -- delay of all lanes is lower than multiframe period,
+    -- it will work correctly according to the standard.
+    -- In all other cases, it's not correct according to the standard,
+    -- but the data will flow and the only difference will be the total
+    -- delay.
+    data_link_start <= '1' when frame_index = RX_BUFFER_DELAY and data_link_ready_vector = all_ones else '0';
+  end generate start_lanes_subclass_1;
 
   -- characters either from scrambler if scrambling enabled or directly from data_link
   transport_chars_array <= descrambler_aligned_chars_array when SCRAMBLING = '1' else data_link_aligned_chars_array;
@@ -138,6 +170,7 @@ begin  -- architecture a1
         Q_character  => Q_character,
         ERROR_CONFIG => ERROR_CONFIG,
         SCRAMBLING   => SCRAMBLING,
+        SUBCLASSV    => SUBCLASSV,
         F            => F,
         K            => K)
       port map (

@@ -31,12 +31,14 @@ entity data_link_layer is
     ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);  -- Configuration
                                         -- for the error
     SCRAMBLING   : std_logic                    := '0';  -- Whether scrambling is enabled
+    SUBCLASSV    : integer range 0 to 1         := 0;
     F            : integer range 1 to 256       := 2;  -- Number of octets in a frame
     K            : integer range 1 to 32        := 1);  -- Number of frames in a mutliframe
   port (
-    ci_char_clk  : in std_logic;        -- Character clock
-    ci_frame_clk : in std_logic;        -- Frame clock
-    ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
+    ci_char_clk       : in std_logic;   -- Character clock
+    ci_frame_clk      : in std_logic;   -- Frame clock
+    ci_multiframe_clk : in std_logic;
+    ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
 
     -- link configuration
     do_lane_config : out link_config;  -- Configuration of the link
@@ -118,9 +120,11 @@ begin  -- architecture a1
   link_controller_ci_resync <= error_handler_co_request_sync or ci_request_sync;
   link_controller : entity work.link_controller
     generic map (
+      SUBCLASSV => SUBCLASSV,
       F => F,
       K => K)
     port map (
+      ci_multiframe_clk          => ci_multiframe_clk,
       ci_frame_clk               => ci_frame_clk,
       ci_char_clk                => ci_char_clk,
       ci_reset                   => ci_reset,

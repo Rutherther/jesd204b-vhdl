@@ -20,41 +20,43 @@ use work.data_link_pkg.all;
 
 entity link_controller is
   generic (
-    F : integer range 1 to 256; -- Number of octets in a frame
-    K : integer range 1 to 32; -- Number of frames in a multiframe
-    K_character  : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
+    SUBCLASSV   : integer range 0 to 1 := 0;
+    F           : integer range 1 to 256;     -- Number of octets in a frame
+    K           : integer range 1 to 32;  -- Number of frames in a multiframe
+    K_character : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
-    ci_frame_clk : in std_logic;        -- Frame clock
-    ci_char_clk : in std_logic;         -- Character clock
-    ci_reset : in std_logic;            -- Reset (asynchronous, active low)
-    di_char : in character_vector;      -- Output character from 8b10b decoder
+    ci_multiframe_clk : in std_logic;   -- Multiframe clock
+    ci_frame_clk      : in std_logic;   -- Frame clock
+    ci_char_clk       : in std_logic;   -- Character clock
+    ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
+    di_char           : in character_vector;  -- Output character from 8b10b decoder
 
-    do_config : out link_config;        -- Config found in ILAS
+    do_config : out link_config;  -- Config found in ILAS
 
-    ci_lane_alignment_error : in std_logic;  -- Signals a problem with lane
+    ci_lane_alignment_error   : in std_logic;  -- Signals a problem with lane
                                              -- alignment in this data link
                                              -- (see lane alighnment component)
     ci_lane_alignment_aligned : in std_logic;  -- Signals that lane is
                                                -- correctly aligned (see
                                                -- lane_alignment component)
-    ci_lane_alignment_ready : in std_logic;  -- Signals that the lane received
+    ci_lane_alignment_ready   : in std_logic;  -- Signals that the lane received
                                              -- /A/ and is waiting to start
                                              -- sending data (see
                                              -- lane_alignment component)
 
-    ci_frame_alignment_error : in std_logic;  -- Signals that the frame was misaligned.
+    ci_frame_alignment_error   : in std_logic;  -- Signals that the frame was misaligned.
     ci_frame_alignment_aligned : in std_logic;  -- Signals that the frame end
                                                 -- was found and did not change.
 
-    ci_resync : in std_logic;           -- Whether to start syncing again.
+    ci_resync : in std_logic;  -- Whether to start syncing again.
 
-    co_synced : out std_logic;          -- Whether the lane is synced (received
+    co_synced              : out std_logic;  -- Whether the lane is synced (received
                                         -- 4 /K/ characters and proceeds correctly)
-    co_state : out link_state;          -- The state of the lane.
+    co_state               : out link_state;  -- The state of the lane.
     co_uncorrectable_error : out std_logic;  -- Detected an uncorrectable
                                              -- error, has to resync (ilas
                                              -- parsing error)
-    co_error : out std_logic);          -- Detected any error, processing may
+    co_error               : out std_logic);          -- Detected any error, processing may
                                         -- differ
 end entity link_controller;
 
@@ -131,14 +133,27 @@ begin  -- architecture a1
     end if;
   end process set_state;
 
-  set_synced: process(ci_frame_clk, ci_reset) is
-  begin
-    if ci_reset = '0' then
-      co_synced <= '0';
-    elsif ci_frame_clk'event and ci_frame_clk = '1' then
-      co_synced <= synced;
-    end if;
-  end process set_synced;
+  synced_subclass_0: if SUBCLASSV = 0 generate
+    set_synced: process(ci_frame_clk, ci_reset) is
+    begin
+      if ci_reset = '0' then
+        co_synced <= '0';
+      elsif ci_frame_clk'event and ci_frame_clk = '1' then
+        co_synced <= synced;
+      end if;
+    end process set_synced;
+  end generate synced_subclass_0;
+
+  synced_subclass_1: if SUBCLASSV = 1 generate
+    set_synced: process(ci_multiframe_clk, ci_reset) is
+    begin
+      if ci_reset = '0' then
+        co_synced <= '0';
+      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then
+        co_synced <= synced;
+      end if;
+    end process set_synced;
+  end generate synced_subclass_1;
 
   synced <= '0' when reg_state = INIT or (reg_state = CGS and reg_k_counter < SYNC_COUNT) else '1';
   full_synchronization <= '0' when synced = '0' or correct_8b10b_characters < FULL_SYNCHRONIZATION_AFTER else '1';
