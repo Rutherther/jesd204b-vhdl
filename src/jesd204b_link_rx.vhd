@@ -126,7 +126,7 @@ begin  -- architecture a1
     data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
   end generate start_lanes_subclass_0;
 
-  start_lanes_subclass_1: if SUBCLASSV = 0 generate
+  start_lanes_subclass_1: if SUBCLASSV = 1 generate
     set_frame_index: process (ci_frame_clk, ci_multiframe_clk, ci_reset) is
     begin  -- process set_frame_idnex
       if ci_reset = '0' then            -- asynchronous reset (active low)
