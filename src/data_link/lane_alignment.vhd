@@ -93,7 +93,7 @@ begin  -- architecture a1
   next_ready <= '0' when ci_state = INIT else
                 '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = R_character and (ci_state = CGS or ci_state = ILS)) else
                 '0';
-  next_started <= '0' when reg_ready = '0' else
+  next_started <= '0' when reg_ready = '0' or ci_state = CGS else
                   '1' when (ci_start = '1' or reg_started = '1') else
                   '0';
   co_aligned <= reg_started;            -- TODO: check for misalignment
