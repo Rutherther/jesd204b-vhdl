@@ -33,7 +33,7 @@ begin  -- architecture a1
     elsif ci_device_clk'event and ci_device_clk = '1' then  -- rising clock edge
       count <= (count + 1) mod COUNT_TO;
       if prev_sysref = '0' and ci_sysref = '1' and ci_enable_sync = '1' then
-        count <= (-PHASE_ADJUST) mod COUNT_TO;
+        count <= (-PHASE_ADJUST + 1) mod COUNT_TO;
       end if;
       prev_sysref <= ci_sysref;
     end if;
