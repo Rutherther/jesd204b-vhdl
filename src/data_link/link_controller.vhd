@@ -59,8 +59,13 @@ entity link_controller is
 end entity link_controller;
 
 architecture a1 of link_controller is
-  constant SYNC_COUNT : integer := 4;
+  constant SYNC_COUNT : integer range 0 to 4 := 4;
+  constant FULL_SYNCHRONIZATION_AFTER : integer range 0 to 4 := 4;
   signal synced : std_logic := '0';
+  signal full_synchronization : std_logic := '0'; -- Assumed after 4 /K/
+                                                  -- characters + 4 more 8b10b
+                                                  -- correct characters
+  signal correct_8b10b_characters : integer range 0 to FULL_SYNCHRONIZATION_AFTER;
 
   signal reg_state : link_state := INIT;
   signal reg_k_counter : integer range 0 to 15 := 0;
@@ -86,15 +91,23 @@ begin  -- architecture a1
       co_unexpected_char => ilas_unexpected_char);
 
   set_state: process (ci_char_clk, ci_reset) is
+    variable char_error : std_logic;
   begin  -- process set_state
     if ci_reset = '0' then              -- asynchronous reset (active low)
       reg_state <= INIT;
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
-      if ci_resync = '1' then
+      char_error := di_char.disparity_error or di_char.missing_error;
+
+      if correct_8b10b_characters < FULL_SYNCHRONIZATION_AFTER and char_error = '0' then
+        correct_8b10b_characters <= correct_8b10b_characters + 1;
+      end if;
+
+      if ci_resync = '1' or (full_synchronization = '0' and char_error = '1') then
         reg_state <= INIT;
         reg_k_counter <= 0;
       elsif reg_state = CGS then
         if reg_k_counter < SYNC_COUNT then
+          correct_8b10b_characters <= 1;
           if di_char.d8b = K_character and di_char.kout = '1' then
             reg_k_counter <= reg_k_counter + 1;
           else
@@ -128,6 +141,7 @@ begin  -- architecture a1
   end process set_synced;
 
   synced <= '0' when reg_state = INIT or (reg_state = CGS and reg_k_counter < SYNC_COUNT) else '1';
+  full_synchronization <= '0' when synced = '0' or correct_8b10b_characters < FULL_SYNCHRONIZATION_AFTER else '1';
 
   co_state <= reg_state;
   -- TODO: add ILAS errors, add CGS error in case sync does not happen for long
