@@ -174,17 +174,18 @@ begin  -- architecture a1
         F            => F,
         K            => K)
       port map (
-        ci_char_clk      => ci_char_clk,
-        ci_frame_clk     => ci_frame_clk,
-        ci_reset         => ci_reset,
-        do_lane_config   => lane_configuration_array(i),
-        co_lane_ready    => data_link_ready_vector(i),
-        ci_lane_start    => data_link_start,
-        ci_request_sync  => ci_request_sync,
-        co_synced        => data_link_synced_vector(i),
-        di_10b           => di_transceiver_data(i),
-        do_aligned_chars => data_link_aligned_chars_array(i),
-        co_frame_state   => data_link_frame_state_array(i));
+        ci_char_clk       => ci_char_clk,
+        ci_frame_clk      => ci_frame_clk,
+        ci_multiframe_clk => ci_multiframe_clk,
+        ci_reset          => ci_reset,
+        do_lane_config    => lane_configuration_array(i),
+        co_lane_ready     => data_link_ready_vector(i),
+        ci_lane_start     => data_link_start,
+        ci_request_sync   => ci_request_sync,
+        co_synced         => data_link_synced_vector(i),
+        di_10b            => di_transceiver_data(i),
+        do_aligned_chars  => data_link_aligned_chars_array(i),
+        co_frame_state    => data_link_frame_state_array(i));
 
     descrambler_gen: if SCRAMBLING = '1' generate
       descrambler: entity work.descrambler
