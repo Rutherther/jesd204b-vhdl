@@ -31,8 +31,8 @@ entity data_link_layer is
     ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);  -- Configuration
                                         -- for the error
     SCRAMBLING   : std_logic                    := '0';  -- Whether scrambling is enabled
-    F            : integer                      := 2;  -- Number of octets in a frame
-    K            : integer                      := 1);  -- Number of frames in a mutliframe
+    F            : integer range 1 to 256       := 2;  -- Number of octets in a frame
+    K            : integer range 1 to 32        := 1);  -- Number of frames in a mutliframe
   port (
     ci_char_clk  : in std_logic;        -- Character clock
     ci_frame_clk : in std_logic;        -- Frame clock
@@ -42,9 +42,9 @@ entity data_link_layer is
     do_lane_config : out link_config;  -- Configuration of the link
 
     -- synchronization
-    co_lane_ready : out std_logic;  -- Received /A/, waiting for lane sync
-    ci_lane_start : in  std_logic;  -- Start sending data from lane buffer
-    ci_request_sync : in std_logic; -- Request resynchronization
+    co_lane_ready   : out std_logic;  -- Received /A/, waiting for lane sync
+    ci_lane_start   : in  std_logic;  -- Start sending data from lane buffer
+    ci_request_sync : in  std_logic;  -- Request resynchronization
 
     -- input, output
     co_synced        : out std_logic;  -- Whether the lane is synced

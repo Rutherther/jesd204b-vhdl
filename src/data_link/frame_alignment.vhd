@@ -78,8 +78,8 @@ architecture a1 of frame_alignment is
   signal reg_correct_sync_chars : integer := 0;
   signal reg_known_sync_char_position : integer range 0 to 256;
 
-  signal next_octet_index : integer := 0;
-  signal next_adjusted_octet_index : integer := 0;
+  signal next_octet_index : integer range 0 to F := 0;
+  signal next_adjusted_octet_index : integer range 0 to F := 0;
 begin  -- architecture a1
   data_buffer: entity work.ring_buffer
     generic map (

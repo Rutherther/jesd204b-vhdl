@@ -4,7 +4,7 @@ use work.data_link_pkg.all;
 
 entity descrambler is
   generic (
-    F : integer);
+    F : integer range 1 to 256);
   port (
     ci_frame_clk : in  std_logic;
     ci_reset    : in  std_logic;

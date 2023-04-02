@@ -15,11 +15,11 @@ use work.data_link_pkg.all;
 
 entity lane_alignment is
   generic (
-    F : integer; -- Number of octets in a frame
-    K : integer; -- Number of frames in a multiframe
-    buffer_size     : integer          := 256;  -- How many octets to keep
-    R_character : std_logic_vector(7 downto 0) := "00011100";  -- The /R/ character
-    dummy_character : character_vector := ('1', '0', '0', "10111100", '0'));
+    F               : integer range 1 to 256;  -- Number of octets in a frame
+    K               : integer range 1 to 32;  -- Number of frames in a multiframe
+    buffer_size     : integer                      := 256;  -- How many octets to keep
+    R_character     : std_logic_vector(7 downto 0) := "00011100";  -- The /R/ character
+    dummy_character : character_vector             := ('1', '0', '0', "10111100", '0'));
 -- Character to send before the buffer is ready and started
 
   port (
@@ -49,8 +49,8 @@ architecture a1 of lane_alignment is
   signal reg_started : std_logic := '0';
   signal reg_error : std_logic := '0';
 
-  signal reg_write_index : integer := 0;
-  signal reg_read_index : integer := 0;
+  signal reg_write_index : integer range 0 to buffer_size := 0;
+  signal reg_read_index  : integer range 0 to buffer_size := 0;
 
   signal next_write_index : integer range 0 to buffer_size-1 := 0;
   signal next_read_index  : integer range 0 to buffer_size-1 := 0;

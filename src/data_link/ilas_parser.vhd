@@ -14,20 +14,20 @@ use ieee.numeric_std.all;
 
 entity ilas_parser is
   generic (
-    F : integer; -- Number of octets in a frame
-    K : integer; -- Number of frames in a multiframe
-    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Character
-                                                                -- for syncing
-    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
-                                                                -- multiframe
-                                                                -- start character
-    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- ILAS
-                                                                -- multiframe
-                                                                -- end character
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
-                                                                -- multiframe
-                                                                -- 2nd character
-    multiframes_count : integer                      := 4);
+    F                 : integer range 1 to 256;  -- Number of octets in a frame
+    K                 : integer range 1 to 32;  -- Number of frames in a multiframe
+    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- Character
+                                        -- for syncing
+    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
+                                        -- multiframe
+                                        -- start character
+    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- ILAS
+                                        -- multiframe
+                                        -- end character
+    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+                                        -- multiframe
+                                        -- 2nd character
+    multiframes_count : integer range 1 to 32        := 4);
 
   port (
     ci_char_clk        : in  std_logic;  -- Character clock
@@ -48,19 +48,19 @@ architecture a1 of ilas_parser is
   signal octets_in_multiframe : integer range 0 to 8192 := 0;
   signal link_config_data : std_logic_vector(link_config_length-1 downto 0) := (others => '0');
   signal reg_processing_ilas : std_logic := '0';
-  signal reg_multiframe_index : integer := 0;
-  signal reg_octet_index : integer := 0;
+  signal reg_multiframe_index : integer range 0 to multiframes_count+1 := 0;
+  signal reg_octet_index : integer range 0 to F*K+5 := 0;
 
   signal next_processing_ilas : std_logic := '0';
-  signal next_multiframe_index : integer := 0;
-  signal next_octet_index : integer := 0;
+  signal next_multiframe_index : integer range 0 to multiframes_count+1 := 0;
+  signal next_octet_index : integer range 0 to F*K+5 := 0;
 
   signal finished : std_logic := '0';
   signal err : std_logic := '0';
 
 
   function getOctetUpIndex (
-    octet_index : integer)
+    octet_index : integer range 0 to F*K+5)
     return integer is
   begin  -- function getByteUpIndex
     return link_config_length - 1 - 8 * octet_index;
@@ -68,9 +68,9 @@ architecture a1 of ilas_parser is
 
   function getDataByIndex (
     data        : std_logic_vector(link_config_length-1 downto 0);
-    octet_index : integer;
-    bit_index   : integer;
-    length      : integer)
+    octet_index : integer range 0 to F*K+5;
+    bit_index   : integer range 0 to 7;
+    length      : integer range 1 to 8)
     return std_logic_vector is
     variable up_index : integer;
   begin  -- function getDataByIndex
@@ -80,8 +80,8 @@ architecture a1 of ilas_parser is
 
   function getBitByIndex (
     data        : std_logic_vector(link_config_length-1 downto 0);
-    octet_index : integer;
-    bit_index   : integer)
+    octet_index : integer range 0 to F*K+5;
+    bit_index   : integer range 0 to 7)
     return std_logic is
     variable up_index : integer;
   begin  -- function getBitByIndex

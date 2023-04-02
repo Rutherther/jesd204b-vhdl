@@ -20,8 +20,8 @@ use work.data_link_pkg.all;
 
 entity link_controller is
   generic (
-    F : integer; -- Number of octets in a frame
-    K : integer; -- Number of frames in a multiframe
+    F : integer range 1 to 256; -- Number of octets in a frame
+    K : integer range 1 to 32; -- Number of frames in a multiframe
     K_character  : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
     ci_frame_clk : in std_logic;        -- Frame clock

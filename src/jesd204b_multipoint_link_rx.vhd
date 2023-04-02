@@ -44,7 +44,7 @@ architecture a1 of jesd204b_multipoint_link_rx is
 
   -- purpose: Count lanes before link with index link_index
   function sumCummulativeLanes (
-    link_index : integer)
+    link_index : integer range 0 to LINKS-1)
     return integer is
     variable lanes_count : integer := 0;
   begin  -- function sumCummulativeLanes
@@ -59,7 +59,7 @@ architecture a1 of jesd204b_multipoint_link_rx is
 
   -- purpose: Count converters before link with index link_index
   function sumCummulativeConverters (
-    link_index : integer)
+    link_index : integer range 0 to LINKS-1)
     return integer is
     variable converters_count : integer := 0;
   begin  -- function sumCummulativeConverters

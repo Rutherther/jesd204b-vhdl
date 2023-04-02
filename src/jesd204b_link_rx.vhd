@@ -22,24 +22,24 @@ entity jesd204b_link_rx is
                                         -- alignment character
     Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
-    ADJCNT       : integer                      := 0;
+    ADJCNT       : integer range 0 to 15        := 0;
     ADJDIR       : std_logic                    := '0';
-    BID          : integer                      := 0;
-    DID          : integer                      := 0;
+    BID          : integer range 0 to 15        := 0;
+    DID          : integer range 0 to 255       := 0;
     HD           : std_logic                    := '0';
-    JESDV        : integer                      := 1;
+    JESDV        : integer range 0 to 7         := 1;
     PHADJ        : std_logic                    := '0';
-    SUBCLASSV    : integer                      := 0;
-    K            : integer;             -- Number of frames in a
-                                        -- multiframe
-    CS           : integer;             -- Number of control bits per sample
-    M            : integer;             -- Number of converters
-    S            : integer;             -- Number of samples
-    L            : integer;             -- Number of lanes
-    F            : integer;             -- Number of octets in a frame
-    CF           : integer;             -- Number of control words
-    N            : integer;             -- Size of a sample
-    Nn           : integer;             -- Size of a word (sample + ctrl if CF
+    SUBCLASSV    : integer range 0 to 7         := 0;
+    K            : integer range 1 to 32;  -- Number of frames in a
+                                           -- multiframe
+    CS           : integer range 0 to 3;   -- Number of control bits per sample
+    M            : integer range 1 to 256;  -- Number of converters
+    S            : integer range 1 to 32;  -- Number of samples
+    L            : integer range 1 to 32;  -- Number of lanes
+    F            : integer range 1 to 256;  -- Number of octets in a frame
+    CF           : integer range 0 to 32;  -- Number of control words
+    N            : integer range 1 to 32;  -- Size of a sample
+    Nn           : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
     ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);
     SCRAMBLING   : std_logic                    := '0');
   port (
@@ -53,8 +53,7 @@ entity jesd204b_link_rx is
 
     di_transceiver_data : in  lane_input_array(0 to L-1);  -- Data from transceivers
     do_samples          : out samples_array(0 to M - 1, 0 to S - 1);
-    co_frame_state      : out frame_state;
--- Output samples
+    co_frame_state      : out frame_state;  -- Output samples
     co_correct_data     : out std_logic);  -- Whether samples are correct user
                                            -- data
 end entity jesd204b_link_rx;
@@ -109,9 +108,9 @@ architecture a1 of jesd204b_link_rx is
       then
         matches := '0';
       end if;
+    end loop;  -- i
 
       return matches;
-    end loop;  -- i
   end function ConfigsMatch;
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready

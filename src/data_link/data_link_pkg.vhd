@@ -41,7 +41,7 @@ package data_link_pkg is
     DID       : integer range 0 to 255;        -- Device identification number
     F         : integer range 1 to 256;        -- No. of octets per frame
     HD        : std_logic;              -- High density format
-    JESDV     : integer;                -- JESD204 version
+    JESDV     : integer range 0 to 7;                -- JESD204 version
     K         : integer range 1 to 32;  -- No. of frames per multiframe
     L         : integer range 1 to 32;  -- No. of lanes per converter
     LID       : integer range 0 to 31;  -- Lane identification number
@@ -59,19 +59,19 @@ package data_link_pkg is
   end record link_config;
 
   type error_handling_config is record
-    lane_alignment_realign_after  : integer;  -- realign after correctly
-                                              -- received X alignment
-                                              -- characters (0 to disable)
-    frame_alignment_realign_after : integer;  -- realign after correctly
-                                              -- received X alignment
-                                              -- characters (0 to disable)
-    tolerate_missing_in_frame     : integer;  -- How many missing errors to
-                                              -- tolerate in a frame (0 to disable)
-    tolerate_disparity_in_frame   : integer;  -- How many disparity errors to
-                                              -- tolerate in a frame (0 to disable)
-    tolerate_unexpected_characters_in_frame : integer;  -- How many unexpected
-                                                        -- characters to
-                                                        -- tolerate in a frame
+    lane_alignment_realign_after            : integer range 0 to 256;  -- realign after correctly
+                                        -- received X alignment
+                                        -- characters (0 to disable)
+    frame_alignment_realign_after           : integer range 0 to 256;  -- realign after correctly
+                                        -- received X alignment
+                                        -- characters (0 to disable)
+    tolerate_missing_in_frame               : integer range 0 to 256;  -- How many missing errors to
+                                        -- tolerate in a frame (0 to disable)
+    tolerate_disparity_in_frame             : integer range 0 to 256;  -- How many disparity errors to
+                                        -- tolerate in a frame (0 to disable)
+    tolerate_unexpected_characters_in_frame : integer range 0 to 256;  -- How many unexpected
+                                        -- characters to
+                                        -- tolerate in a frame
   end record error_handling_config;
 
 end package data_link_pkg;

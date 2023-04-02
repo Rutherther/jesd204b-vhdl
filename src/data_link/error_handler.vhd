@@ -15,8 +15,8 @@ use work.data_link_pkg.all;
 entity error_handler is
   generic (
     CONFIG : error_handling_config; -- Configuration of error handling
-    F : integer; -- Number of octets in a frame
-    K : integer); -- Number of frames in a multiframe
+    F : integer range 1 to 256; -- Number of octets in a frame
+    K : integer range 1 to 32); -- Number of frames in a multiframe
   port (
     ci_char_clk                      : in  std_logic;  -- Character clock
     ci_reset                         : in  std_logic;  -- Reset (asynchronous,
