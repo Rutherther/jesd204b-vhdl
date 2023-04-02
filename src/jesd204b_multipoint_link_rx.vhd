@@ -13,11 +13,11 @@ entity jesd204b_multipoint_link_rx is
     A_character          : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
     Q_character          : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
-    DEVICE_CLK_FREQUENCY : integer;
-    DATA_RATE_MULT       : integer;     -- DEVICE_CLK_FREQ*this is lane bit rate
-                                        -- frame 2nd character
+    DATA_RATE_MULT       : integer;  -- DEVICE_CLK_FREQ*this is lane bit rate
+                                     -- frame 2nd character
     MULTIFRAME_RATE      : integer;     -- F * K, should be the same for every
                                         -- device
+    RX_BUFFER_DELAY      : integer range 1 to 32        := 1;
     LINKS                : integer;     -- Count of links
     LANES                : integer;     -- Total nubmer of lanes
     CONVERTERS           : integer;     -- Total number of converters
@@ -107,6 +107,7 @@ begin  -- architecture a1
         A_character  => A_character,
         Q_character  => Q_character,
         ERROR_CONFIG => ERROR_CONFIG,
+        RX_BUFFER_DELAY => RX_BUFFER_DELAY,
         ADJCNT       => CONFIG(i).ADJCNT,
         BID          => CONFIG(i).BID,
         DID          => CONFIG(i).DID,
