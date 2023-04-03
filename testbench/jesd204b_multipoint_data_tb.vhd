@@ -11,6 +11,8 @@ end entity jesd204b_multipoint_rx_data_tb;
 architecture a1 of jesd204b_multipoint_rx_data_tb is
   constant LANES : integer := 2;
   constant LINKS : integer := 2;
+  constant F : integer := 2;
+  constant K : integer := 9;
   constant CONFIG : link_config_array(0 to LINKS - 1) :=
   (
     (0, '0', 0, 0, 2, 0, 2, '0', 1, 9, 1, 0, 1, 14, 16, '0', 1, '0', 0, "00000000", "00000000", "000000000", 0),
@@ -36,6 +38,17 @@ architecture a1 of jesd204b_multipoint_rx_data_tb is
     (data => (("00000000", '0'), ("00000000", '0'))),
     (data => (("00000000", '0'), ("00000000", '0'))),
     (data => (("00000000", '0'), ("00000000", '0'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
+    (data => (("10111100", '1'), ("10111100", '1'))),
     (data => (("10111100", '1'), ("10111100", '1'))),
     (data => (("10111100", '1'), ("10111100", '1'))),
     (data => (("10111100", '1'), ("10111100", '1'))),
@@ -127,13 +140,15 @@ architecture a1 of jesd204b_multipoint_rx_data_tb is
 
   constant char_clk_period : time := 1 ns;    -- The clock period
   constant frame_clk_period : time := 1 ns * CONFIG(0).F;    -- The clock period
+  constant sysref_period : time := char_clk_period * CONFIG(0).K * CONFIG(0).F;    -- The clock period
 
   signal di_transceiver_data : lane_input_array(0 to LANES-1);
   signal di_lane_data : lane_data_array(0 to LANES-1);
 
-  signal char_clk : std_logic := '0';        -- The clock
-  signal frame_clk : std_logic := '0';        -- The clock
-  signal reset : std_logic := '0';      -- The reset
+  signal sysref    : std_logic := '0';
+  signal char_clk  : std_logic := '0';  -- The clock
+  signal frame_clk : std_logic := '0';  -- The clock
+  signal reset     : std_logic := '0';  -- The reset
 
   signal test_vec_index : integer := 0;
 
@@ -146,13 +161,18 @@ architecture a1 of jesd204b_multipoint_rx_data_tb is
 begin  -- architecture a1
   uut : entity work.jesd204b_multipoint_link_rx
     generic map (
+      DATA_RATE_MULT => 10,
+      MULTIFRAME_RATE => F*K,
+      RX_BUFFER_DELAY => 6,
       LINKS      => LINKS,
       LANES      => LANES,
       CONVERTERS => 2,
       CONFIG     => CONFIG)
     port map (
+      ci_device_clk       => char_clk,
       ci_char_clk         => char_clk,
       ci_frame_clk        => frame_clk,
+      ci_sysref           => sysref,
       ci_reset            => reset,
       ci_request_sync     => '0',
       di_transceiver_data => di_transceiver_data,
@@ -173,8 +193,18 @@ begin  -- architecture a1
   end generate encoders;
 
   char_clk <= not char_clk after char_clk_period/2;
-  frame_clk <= not frame_clk after frame_clk_period/2;
+  sysref <= not sysref after sysref_period/2;
   reset <= '1' after char_clk_period*2;
+
+  frame_clk_gen: process is
+  begin  -- process frame_clk_gen
+    wait for char_clk_period/2;
+
+    while true loop
+      frame_clk <= not frame_clk;
+      wait for frame_clk_period/2;
+    end loop;
+  end process frame_clk_gen;
 
   test: process is
   begin  -- process test

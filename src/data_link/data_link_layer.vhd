@@ -22,17 +22,22 @@ use work.transport_pkg.all;
 
 entity data_link_layer is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- K sync character
-    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
+    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- K sync character
+    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
                                         -- multiframe start
-    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
+    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
+    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
                                         -- 2nd character
-    ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);  -- Configuration
+    ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
+                                                              -- buffer that is
+                                                              -- used for
+                                                              -- aligning lanes
+    ERROR_CONFIG      : error_handling_config        := (2, 0, 5, 5, 5);  -- Configuration
                                         -- for the error
-    SCRAMBLING   : std_logic                    := '0';  -- Whether scrambling is enabled
-    F            : integer range 1 to 256       := 2;  -- Number of octets in a frame
-    K            : integer range 1 to 32        := 1);  -- Number of frames in a mutliframe
+    SCRAMBLING        : std_logic                    := '0';  -- Whether scrambling is enabled
+    SUBCLASSV         : integer range 0 to 1         := 0;
+    F                 : integer range 1 to 256       := 2;  -- Number of octets in a frame
+    K                 : integer range 1 to 32        := 1);  -- Number of frames in a mutliframe
   port (
     ci_char_clk  : in std_logic;        -- Character clock
     ci_frame_clk : in std_logic;        -- Frame clock
@@ -118,6 +123,7 @@ begin  -- architecture a1
   link_controller_ci_resync <= error_handler_co_request_sync or ci_request_sync;
   link_controller : entity work.link_controller
     generic map (
+      SUBCLASSV => SUBCLASSV,
       F => F,
       K => K)
     port map (
@@ -155,6 +161,7 @@ begin  -- architecture a1
   -- lane alignment
   lane_alignment : entity work.lane_alignment
     generic map (
+      BUFFER_SIZE => ALIGN_BUFFER_SIZE,
       F => F,
       K => K)
     port map (

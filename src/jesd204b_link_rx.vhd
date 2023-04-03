@@ -15,38 +15,44 @@ use work.jesd204b_pkg.all;
 
 entity jesd204b_link_rx is
   generic (
-    K_character  : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_character  : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_character  : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_character  : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
-    ADJCNT       : integer range 0 to 15        := 0;
-    ADJDIR       : std_logic                    := '0';
-    BID          : integer range 0 to 15        := 0;
-    DID          : integer range 0 to 255       := 0;
-    HD           : std_logic                    := '0';
-    JESDV        : integer range 0 to 7         := 1;
-    PHADJ        : std_logic                    := '0';
-    SUBCLASSV    : integer range 0 to 7         := 0;
-    K            : integer range 1 to 32;  -- Number of frames in a
-                                           -- multiframe
-    CS           : integer range 0 to 3;   -- Number of control bits per sample
-    M            : integer range 1 to 256;  -- Number of converters
-    S            : integer range 1 to 32;  -- Number of samples
-    L            : integer range 1 to 32;  -- Number of lanes
-    F            : integer range 1 to 256;  -- Number of octets in a frame
-    CF           : integer range 0 to 32;  -- Number of control words
-    N            : integer range 1 to 32;  -- Size of a sample
-    Nn           : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
-    ERROR_CONFIG : error_handling_config        := (2, 0, 5, 5, 5);
-    SCRAMBLING   : std_logic                    := '0');
+    ADJCNT            : integer range 0 to 15        := 0;
+    ADJDIR            : std_logic                    := '0';
+    BID               : integer range 0 to 15        := 0;
+    DID               : integer range 0 to 255       := 0;
+    HD                : std_logic                    := '0';
+    JESDV             : integer range 0 to 7         := 1;
+    PHADJ             : std_logic                    := '0';
+    SUBCLASSV         : integer range 0 to 7         := 0;
+    K                 : integer range 1 to 32;  -- Number of frames in a
+                                                -- multiframe
+    CS                : integer range 0 to 3;  -- Number of control bits per sample
+    M                 : integer range 1 to 256;  -- Number of converters
+    S                 : integer range 1 to 32;  -- Number of samples
+    L                 : integer range 1 to 32;  -- Number of lanes
+    F                 : integer range 1 to 256;  -- Number of octets in a frame
+    CF                : integer range 0 to 32;  -- Number of control words
+    N                 : integer range 1 to 32;  -- Size of a sample
+    Nn                : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
+    ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
+                                                              -- buffer that is
+                                                              -- used for
+                                                              -- aligning lanes
+    RX_BUFFER_DELAY   : integer range 1 to 32        := 1;
+    ERROR_CONFIG      : error_handling_config        := (2, 0, 5, 5, 5);
+    SCRAMBLING        : std_logic                    := '0');
   port (
-    ci_char_clk     : in std_logic;     -- Character clock
-    ci_frame_clk    : in std_logic;     -- Frame clock
-    ci_reset        : in std_logic;     -- Reset (asynchronous, active low)
-    ci_request_sync : in std_logic;     -- Request synchronization
+    ci_char_clk       : in std_logic;   -- Character clock
+    ci_frame_clk      : in std_logic;   -- Frame clock
+    ci_multiframe_clk : in std_logic;  -- Mutliframe clock (subclass 1, 2 only)
+    ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
+    ci_request_sync   : in std_logic;   -- Request synchronization
 
     co_nsynced : out std_logic;  -- Whether receiver is synced (active low)
     co_error   : out std_logic;
@@ -59,6 +65,11 @@ entity jesd204b_link_rx is
 end entity jesd204b_link_rx;
 
 architecture a1 of jesd204b_link_rx is
+  signal request_sync : std_logic;
+  signal request_sync_event : std_logic;
+
+  signal reg_synced : std_logic;
+  signal next_synced : std_logic;
   -- == DATA LINK ==
   -- outputs
   signal data_link_ready_vector : std_logic_vector(L-1 downto 0) := (others => '0');
@@ -67,6 +78,9 @@ architecture a1 of jesd204b_link_rx is
   signal data_link_frame_state_array : frame_state_array(0 to L-1);
   -- inputs
   signal data_link_start : std_logic := '0';
+
+  -- subclass 1 support
+  signal frame_index : integer;
 
   -- == DESCRAMBLER ==
   signal descrambler_aligned_chars_array : lane_character_array(0 to L-1)(F*8-1 downto 0);
@@ -114,32 +128,96 @@ architecture a1 of jesd204b_link_rx is
   end function ConfigsMatch;
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready
-  co_nsynced <= '0' when data_link_synced_vector = all_ones else '1';
+  nsynced_subclass_0: if SUBCLASSV = 0 generate
+    set_nsynced: process (ci_frame_clk, ci_reset) is
+    begin  -- process set_nsynced
+      if ci_reset = '0' then              -- asynchronous reset (active low)
+        co_nsynced <= '1';
+      elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
+        co_nsynced <= '1';
+        if data_link_synced_vector = all_ones then
+          co_nsynced <= '0';
+        end if;
+      end if;
+    end process set_nsynced;
+  end generate nsynced_subclass_0;
+
+  nsynced_subclass_1: if SUBCLASSV = 1 generate
+    set_nsynced: process (ci_multiframe_clk, ci_reset) is
+    begin  -- process set_nsynced
+      if ci_reset = '0' then              -- asynchronous reset (active low)
+        co_nsynced <= '1';
+      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then  -- rising clock edge
+        co_nsynced <= '1';
+        if data_link_synced_vector = all_ones then
+          co_nsynced <= '0';
+        end if;
+      end if;
+    end process set_nsynced;
+  end generate nsynced_subclass_1;
+
+  request_sync_gen: process (ci_char_clk, ci_reset) is
+  begin  -- process request_sync
+    if ci_reset = '0' then              -- asynchronous reset (active low)
+      request_sync_event <= '0';
+      reg_synced <= '0';
+    elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
+      reg_synced <= next_synced;
+
+      if request_sync_event = '1' then
+        request_sync_event <= '0';
+      elsif next_synced = '0' and reg_synced = '1' then
+        -- if any of the data links becomes desynchronized,
+        -- request sync on every one of them.
+        request_sync_event <= '1';
+      end if;
+    end if;
+  end process request_sync_gen;
 
   -- start lanes data after all are ready
-  data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
+  start_lanes_subclass_0: if SUBCLASSV = 0 generate
+    data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
+  end generate start_lanes_subclass_0;
+
+  start_lanes_subclass_1: if SUBCLASSV = 1 generate
+    set_frame_index: process (ci_frame_clk, ci_multiframe_clk, ci_reset) is
+    begin  -- process set_frame_idnex
+      if ci_reset = '0' then            -- asynchronous reset (active low)
+        frame_index <= 0;
+      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then  -- rising clock edge
+        frame_index <= 0;
+      elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
+        frame_index <= frame_index + 1;
+      end if;
+    end process set_frame_index;
+    data_link_start <= '1' when frame_index = RX_BUFFER_DELAY and data_link_ready_vector = all_ones else '0';
+  end generate start_lanes_subclass_1;
 
   -- characters either from scrambler if scrambling enabled or directly from data_link
   transport_chars_array <= descrambler_aligned_chars_array when SCRAMBLING = '1' else data_link_aligned_chars_array;
   transport_frame_state_array <= data_link_frame_state_array; -- TODO: buffer
                                                               -- frame_state if
                                                               -- scrambling
-
   -- error '1' if configs do not match
   co_error <= not ConfigsMatch(lane_configuration_array);
   co_correct_data <= co_frame_state.user_data;
 
+  next_synced <= '1' when data_link_synced_vector = all_ones else '0';
+  request_sync <= request_sync_event or ci_request_sync;
+
   data_links : for i in 0 to L-1 generate
     data_link_layer : entity work.data_link_layer
       generic map (
-        K_character  => K_character,
-        R_character  => R_character,
-        A_character  => A_character,
-        Q_character  => Q_character,
-        ERROR_CONFIG => ERROR_CONFIG,
-        SCRAMBLING   => SCRAMBLING,
-        F            => F,
-        K            => K)
+        ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
+        K_character       => K_character,
+        R_character       => R_character,
+        A_character       => A_character,
+        Q_character       => Q_character,
+        ERROR_CONFIG      => ERROR_CONFIG,
+        SCRAMBLING        => SCRAMBLING,
+        SUBCLASSV         => SUBCLASSV,
+        F                 => F,
+        K                 => K)
       port map (
         ci_char_clk      => ci_char_clk,
         ci_frame_clk     => ci_frame_clk,
@@ -147,7 +225,7 @@ begin  -- architecture a1
         do_lane_config   => lane_configuration_array(i),
         co_lane_ready    => data_link_ready_vector(i),
         ci_lane_start    => data_link_start,
-        ci_request_sync  => ci_request_sync,
+        ci_request_sync  => request_sync,
         co_synced        => data_link_synced_vector(i),
         di_10b           => di_transceiver_data(i),
         do_aligned_chars => data_link_aligned_chars_array(i),

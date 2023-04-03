@@ -160,6 +160,7 @@ begin  -- architecture a1
     port map (
       ci_char_clk         => char_clk,
       ci_frame_clk        => frame_clk,
+      ci_multiframe_clk   => '0',
       ci_reset            => reset,
       ci_request_sync     => '0',
       di_transceiver_data => di_transceiver_data,
