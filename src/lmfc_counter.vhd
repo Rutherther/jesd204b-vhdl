@@ -15,6 +15,7 @@ entity lmfc_counter is
     ci_reset          : in  std_logic;
     ci_sysref         : in  std_logic;
     ci_enable_sync    : in  std_logic;  -- Whether to adjust to SYSREF
+    co_aligned        : out std_logic;
     co_multiframe_clk : out std_logic);
 
 end entity lmfc_counter;
@@ -28,12 +29,15 @@ begin  -- architecture a1
   count_phase_adjust: process (ci_device_clk, ci_reset) is
   begin  -- process increase
     if ci_reset = '0' then              -- asynchronous reset (active low)
-      count <= 0;
+      count <= (-1) mod COUNT_TO;
       prev_sysref <=  '0';
+      co_aligned <= '0';
     elsif ci_device_clk'event and ci_device_clk = '1' then  -- rising clock edge
       count <= (count + 1) mod COUNT_TO;
+      co_aligned <= '0';
       if prev_sysref = '0' and ci_sysref = '1' and ci_enable_sync = '1' then
         count <= (-PHASE_ADJUST + 1) mod COUNT_TO;
+        co_aligned <= '1';
       end if;
       prev_sysref <= ci_sysref;
     end if;

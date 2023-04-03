@@ -61,6 +61,8 @@ entity jesd204b_link_rx is
 end entity jesd204b_link_rx;
 
 architecture a1 of jesd204b_link_rx is
+  signal request_sync : std_logic;
+  signal request_sync_event : std_logic;
 
   signal reg_synced : std_logic;
   signal next_synced : std_logic;
@@ -150,6 +152,24 @@ begin  -- architecture a1
     end process set_nsynced;
   end generate nsynced_subclass_1;
 
+  request_sync_gen: process (ci_char_clk, ci_reset) is
+  begin  -- process request_sync
+    if ci_reset = '0' then              -- asynchronous reset (active low)
+      request_sync_event <= '0';
+      reg_synced <= '0';
+    elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
+      reg_synced <= next_synced;
+
+      if request_sync_event = '1' then
+        request_sync_event <= '0';
+      elsif next_synced = '0' and reg_synced = '1' then
+        -- if any of the data links becomes desynchronized,
+        -- request sync on every one of them.
+        request_sync_event <= '1';
+      end if;
+    end if;
+  end process request_sync_gen;
+
   -- start lanes data after all are ready
   start_lanes_subclass_0: if SUBCLASSV = 0 generate
     data_link_start <= '1' when data_link_ready_vector = all_ones else '0';
@@ -166,17 +186,6 @@ begin  -- architecture a1
         frame_index <= frame_index + 1;
       end if;
     end process set_frame_index;
-
-    -- let all lanes start at RX_BUFFER_DELAY frames after multiframe clock
-    -- only if all data links are ready.
-    -- Note that this is not 100% standard respecting implementation.
-    -- The lanes should be freed after defined LMFC after synced is asserted,
-    -- but this is much easier. And provided that the presupposition that
-    -- delay of all lanes is lower than multiframe period,
-    -- it will work correctly according to the standard.
-    -- In all other cases, it's not correct according to the standard,
-    -- but the data will flow and the only difference will be the total
-    -- delay.
     data_link_start <= '1' when frame_index = RX_BUFFER_DELAY and data_link_ready_vector = all_ones else '0';
   end generate start_lanes_subclass_1;
 
@@ -185,7 +194,6 @@ begin  -- architecture a1
   transport_frame_state_array <= data_link_frame_state_array; -- TODO: buffer
                                                               -- frame_state if
                                                               -- scrambling
-
   -- error '1' if configs do not match
   co_error <= not ConfigsMatch(lane_configuration_array);
   co_correct_data <= co_frame_state.user_data;
@@ -208,12 +216,11 @@ begin  -- architecture a1
       port map (
         ci_char_clk       => ci_char_clk,
         ci_frame_clk      => ci_frame_clk,
-        ci_multiframe_clk => ci_multiframe_clk,
         ci_reset          => ci_reset,
         do_lane_config    => lane_configuration_array(i),
         co_lane_ready     => data_link_ready_vector(i),
         ci_lane_start     => data_link_start,
-        ci_request_sync   => ci_request_sync,
+        ci_request_sync   => request_sync,
         co_synced         => data_link_synced_vector(i),
         di_10b            => di_transceiver_data(i),
         do_aligned_chars  => data_link_aligned_chars_array(i),
