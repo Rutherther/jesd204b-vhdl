@@ -25,7 +25,6 @@ entity link_controller is
     K           : integer range 1 to 32;  -- Number of frames in a multiframe
     K_character : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
-    ci_multiframe_clk : in std_logic;   -- Multiframe clock
     ci_frame_clk      : in std_logic;   -- Frame clock
     ci_char_clk       : in std_logic;   -- Character clock
     ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
@@ -133,31 +132,10 @@ begin  -- architecture a1
     end if;
   end process set_state;
 
-  synced_subclass_0: if SUBCLASSV = 0 generate
-    set_synced: process(ci_frame_clk, ci_reset) is
-    begin
-      if ci_reset = '0' then
-        co_synced <= '0';
-      elsif ci_frame_clk'event and ci_frame_clk = '1' then
-        co_synced <= synced;
-      end if;
-    end process set_synced;
-  end generate synced_subclass_0;
-
-  synced_subclass_1: if SUBCLASSV = 1 generate
-    set_synced: process(ci_multiframe_clk, ci_reset) is
-    begin
-      if ci_reset = '0' then
-        co_synced <= '0';
-      elsif ci_multiframe_clk'event and ci_multiframe_clk = '0' then
-        co_synced <= synced;
-      end if;
-    end process set_synced;
-  end generate synced_subclass_1;
-
   synced <= '0' when reg_state = INIT or (reg_state = CGS and reg_k_counter < SYNC_COUNT) else '1';
   full_synchronization <= '0' when synced = '0' or correct_8b10b_characters < FULL_SYNCHRONIZATION_AFTER else '1';
 
+  co_synced <= synced;
   co_state <= reg_state;
   -- TODO: add ILAS errors, add CGS error in case sync does not happen for long
   -- time

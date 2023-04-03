@@ -61,6 +61,9 @@ entity jesd204b_link_rx is
 end entity jesd204b_link_rx;
 
 architecture a1 of jesd204b_link_rx is
+
+  signal reg_synced : std_logic;
+  signal next_synced : std_logic;
   -- == DATA LINK ==
   -- outputs
   signal data_link_ready_vector : std_logic_vector(L-1 downto 0) := (others => '0');
@@ -119,7 +122,33 @@ architecture a1 of jesd204b_link_rx is
   end function ConfigsMatch;
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready
-  co_nsynced <= '0' when data_link_synced_vector = all_ones else '1';
+  nsynced_subclass_0: if SUBCLASSV = 0 generate
+    set_nsynced: process (ci_frame_clk, ci_reset) is
+    begin  -- process set_nsynced
+      if ci_reset = '0' then              -- asynchronous reset (active low)
+        co_nsynced <= '1';
+      elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
+        co_nsynced <= '1';
+        if data_link_synced_vector = all_ones then
+          co_nsynced <= '0';
+        end if;
+      end if;
+    end process set_nsynced;
+  end generate nsynced_subclass_0;
+
+  nsynced_subclass_1: if SUBCLASSV = 1 generate
+    set_nsynced: process (ci_multiframe_clk, ci_reset) is
+    begin  -- process set_nsynced
+      if ci_reset = '0' then              -- asynchronous reset (active low)
+        co_nsynced <= '1';
+      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then  -- rising clock edge
+        co_nsynced <= '1';
+        if data_link_synced_vector = all_ones then
+          co_nsynced <= '0';
+        end if;
+      end if;
+    end process set_nsynced;
+  end generate nsynced_subclass_1;
 
   -- start lanes data after all are ready
   start_lanes_subclass_0: if SUBCLASSV = 0 generate
@@ -160,6 +189,9 @@ begin  -- architecture a1
   -- error '1' if configs do not match
   co_error <= not ConfigsMatch(lane_configuration_array);
   co_correct_data <= co_frame_state.user_data;
+
+  next_synced <= '1' when data_link_synced_vector = all_ones else '0';
+  request_sync <= request_sync_event or ci_request_sync;
 
   data_links : for i in 0 to L-1 generate
     data_link_layer : entity work.data_link_layer

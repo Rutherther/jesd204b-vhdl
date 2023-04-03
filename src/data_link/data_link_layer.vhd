@@ -37,7 +37,6 @@ entity data_link_layer is
   port (
     ci_char_clk       : in std_logic;   -- Character clock
     ci_frame_clk      : in std_logic;   -- Frame clock
-    ci_multiframe_clk : in std_logic;
     ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
 
     -- link configuration
@@ -124,7 +123,6 @@ begin  -- architecture a1
       F => F,
       K => K)
     port map (
-      ci_multiframe_clk          => ci_multiframe_clk,
       ci_frame_clk               => ci_frame_clk,
       ci_char_clk                => ci_char_clk,
       ci_reset                   => ci_reset,
