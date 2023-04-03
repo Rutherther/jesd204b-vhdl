@@ -17,7 +17,7 @@ entity lane_alignment is
   generic (
     F               : integer range 1 to 256;  -- Number of octets in a frame
     K               : integer range 1 to 32;  -- Number of frames in a multiframe
-    buffer_size     : integer                      := 256;  -- How many octets to keep
+    BUFFER_SIZE     : integer                      := 256;  -- How many octets to keep
     R_character     : std_logic_vector(7 downto 0) := "00011100";  -- The /R/ character
     dummy_character : character_vector             := ('1', '0', '0', "10111100", '0'));
 -- Character to send before the buffer is ready and started
@@ -42,18 +42,18 @@ entity lane_alignment is
 end entity lane_alignment;
 
 architecture a1 of lane_alignment is
-  type buffer_array is array (0 to buffer_size) of character_vector;
+  type buffer_array is array (0 to BUFFER_SIZE) of character_vector;
   signal buff : buffer_array := (others => ('0', '0', '0', "00000000", '0'));
 
   signal reg_ready : std_logic := '0';
   signal reg_started : std_logic := '0';
   signal reg_error : std_logic := '0';
 
-  signal reg_write_index : integer range 0 to buffer_size := 0;
-  signal reg_read_index  : integer range 0 to buffer_size := 0;
+  signal reg_write_index : integer range 0 to BUFFER_SIZE := 0;
+  signal reg_read_index  : integer range 0 to BUFFER_SIZE := 0;
 
-  signal next_write_index : integer range 0 to buffer_size-1 := 0;
-  signal next_read_index  : integer range 0 to buffer_size-1 := 0;
+  signal next_write_index : integer range 0 to BUFFER_SIZE-1 := 0;
+  signal next_read_index  : integer range 0 to BUFFER_SIZE-1 := 0;
   signal next_ready       : std_logic                        := '0';
   signal next_started     : std_logic                        := '0';
   signal next_error       : std_logic                        := '0';
@@ -85,9 +85,9 @@ begin  -- architecture a1
   co_error <= reg_error;
   -- TODO handle realignment ?
 
-  next_write_index <= ((reg_write_index + 1) mod buffer_size) when reg_ready = '1' or next_ready = '1' else
+  next_write_index <= ((reg_write_index + 1) mod BUFFER_SIZE) when reg_ready = '1' or next_ready = '1' else
                       0;
-  next_read_index <= ((reg_read_index + 1) mod buffer_size) when reg_started = '1' else
+  next_read_index <= ((reg_read_index + 1) mod BUFFER_SIZE) when reg_started = '1' else
                      0;
 
   next_ready <= '0' when ci_state = INIT else

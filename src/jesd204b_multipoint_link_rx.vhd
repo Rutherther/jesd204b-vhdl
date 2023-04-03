@@ -17,6 +17,10 @@ entity jesd204b_multipoint_link_rx is
                                      -- frame 2nd character
     MULTIFRAME_RATE      : integer;     -- F * K, should be the same for every
                                         -- device
+    ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
+                                                              -- buffer that is
+                                                              -- used for
+                                                              -- aligning lanes
     RX_BUFFER_DELAY      : integer range 1 to 32        := 1;
     LINKS                : integer;     -- Count of links
     LANES                : integer;     -- Total nubmer of lanes
@@ -139,32 +143,33 @@ begin  -- architecture a1
       co_aligned        => multiframe_aligned,
       co_multiframe_clk => multiframe_clk);
 
-  links_rx: for i in 0 to LINKS - 1 generate
-    link: entity work.jesd204b_link_rx
+  links_rx : for i in 0 to LINKS - 1 generate
+    link : entity work.jesd204b_link_rx
       generic map (
-        K_character  => K_character,
-        R_character  => R_character,
-        A_character  => A_character,
-        Q_character  => Q_character,
-        ERROR_CONFIG => ERROR_CONFIG,
-        RX_BUFFER_DELAY => RX_BUFFER_DELAY,
-        ADJCNT       => CONFIG(i).ADJCNT,
-        BID          => CONFIG(i).BID,
-        DID          => CONFIG(i).DID,
-        HD           => CONFIG(i).HD,
-        JESDV        => CONFIG(i).JESDV,
-        PHADJ        => CONFIG(i).PHADJ,
-        SUBCLASSV    => CONFIG(i).SUBCLASSV,
-        K            => CONFIG(i).K,
-        CS           => CONFIG(i).CS,
-        M            => CONFIG(i).M,
-        S            => CONFIG(i).S,
-        L            => CONFIG(i).L,
-        F            => CONFIG(i).F,
-        CF           => CONFIG(i).CF,
-        N            => CONFIG(i).N,
-        Nn           => CONFIG(i).Nn,
-        ADJDIR       => CONFIG(i).ADJDIR)
+        K_character       => K_character,
+        R_character       => R_character,
+        A_character       => A_character,
+        Q_character       => Q_character,
+        ERROR_CONFIG      => ERROR_CONFIG,
+        ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
+        RX_BUFFER_DELAY   => RX_BUFFER_DELAY,
+        ADJCNT            => CONFIG(i).ADJCNT,
+        BID               => CONFIG(i).BID,
+        DID               => CONFIG(i).DID,
+        HD                => CONFIG(i).HD,
+        JESDV             => CONFIG(i).JESDV,
+        PHADJ             => CONFIG(i).PHADJ,
+        SUBCLASSV         => CONFIG(i).SUBCLASSV,
+        K                 => CONFIG(i).K,
+        CS                => CONFIG(i).CS,
+        M                 => CONFIG(i).M,
+        S                 => CONFIG(i).S,
+        L                 => CONFIG(i).L,
+        F                 => CONFIG(i).F,
+        CF                => CONFIG(i).CF,
+        N                 => CONFIG(i).N,
+        Nn                => CONFIG(i).Nn,
+        ADJDIR            => CONFIG(i).ADJDIR)
     port map (
       ci_char_clk         => ci_char_clk,
       ci_frame_clk        => ci_frame_clk,
@@ -174,7 +179,7 @@ begin  -- architecture a1
       co_nsynced          => links_nsynced(i),
       co_error            => links_error(i),
       di_transceiver_data => di_transceiver_data(sumCummulativeLanes(i) to sumCummulativeLanes(i) + CONFIG(i).L - 1),
-      do_samples          => do_samples(i), -- do_samples(sumCummulativeConverters(i) to sumCummulativeConverters(i) + CONFIG(i).M - 1),
+      do_samples          => do_samples(i),  -- do_samples(sumCummulativeConverters(i) to sumCummulativeConverters(i) + CONFIG(i).M - 1),
       co_frame_state      => co_frame_state(i),
       co_correct_data     => links_correct_data(i));
   end generate links_rx;

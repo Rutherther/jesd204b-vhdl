@@ -15,34 +15,38 @@ use work.jesd204b_pkg.all;
 
 entity jesd204b_link_rx is
   generic (
-    K_character     : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_character     : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_character     : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_character     : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
-    ADJCNT          : integer range 0 to 15        := 0;
-    ADJDIR          : std_logic                    := '0';
-    BID             : integer range 0 to 15        := 0;
-    DID             : integer range 0 to 255       := 0;
-    HD              : std_logic                    := '0';
-    JESDV           : integer range 0 to 7         := 1;
-    PHADJ           : std_logic                    := '0';
-    SUBCLASSV       : integer range 0 to 7         := 0;
-    K               : integer range 1 to 32;  -- Number of frames in a
-                                              -- multiframe
-    CS              : integer range 0 to 3;  -- Number of control bits per sample
-    M               : integer range 1 to 256;  -- Number of converters
-    S               : integer range 1 to 32;  -- Number of samples
-    L               : integer range 1 to 32;  -- Number of lanes
-    F               : integer range 1 to 256;  -- Number of octets in a frame
-    CF              : integer range 0 to 32;  -- Number of control words
-    N               : integer range 1 to 32;  -- Size of a sample
-    Nn              : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
-    RX_BUFFER_DELAY : integer range 1 to 32        := 1;
-    ERROR_CONFIG    : error_handling_config        := (2, 0, 5, 5, 5);
-    SCRAMBLING      : std_logic                    := '0');
+    ADJCNT            : integer range 0 to 15        := 0;
+    ADJDIR            : std_logic                    := '0';
+    BID               : integer range 0 to 15        := 0;
+    DID               : integer range 0 to 255       := 0;
+    HD                : std_logic                    := '0';
+    JESDV             : integer range 0 to 7         := 1;
+    PHADJ             : std_logic                    := '0';
+    SUBCLASSV         : integer range 0 to 7         := 0;
+    K                 : integer range 1 to 32;  -- Number of frames in a
+                                                -- multiframe
+    CS                : integer range 0 to 3;  -- Number of control bits per sample
+    M                 : integer range 1 to 256;  -- Number of converters
+    S                 : integer range 1 to 32;  -- Number of samples
+    L                 : integer range 1 to 32;  -- Number of lanes
+    F                 : integer range 1 to 256;  -- Number of octets in a frame
+    CF                : integer range 0 to 32;  -- Number of control words
+    N                 : integer range 1 to 32;  -- Size of a sample
+    Nn                : integer range 1 to 32;  -- Size of a word (sample + ctrl if CF
+    ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
+                                                              -- buffer that is
+                                                              -- used for
+                                                              -- aligning lanes
+    RX_BUFFER_DELAY   : integer range 1 to 32        := 1;
+    ERROR_CONFIG      : error_handling_config        := (2, 0, 5, 5, 5);
+    SCRAMBLING        : std_logic                    := '0');
   port (
     ci_char_clk       : in std_logic;   -- Character clock
     ci_frame_clk      : in std_logic;   -- Frame clock
@@ -204,27 +208,28 @@ begin  -- architecture a1
   data_links : for i in 0 to L-1 generate
     data_link_layer : entity work.data_link_layer
       generic map (
-        K_character  => K_character,
-        R_character  => R_character,
-        A_character  => A_character,
-        Q_character  => Q_character,
-        ERROR_CONFIG => ERROR_CONFIG,
-        SCRAMBLING   => SCRAMBLING,
-        SUBCLASSV    => SUBCLASSV,
-        F            => F,
-        K            => K)
+        ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
+        K_character       => K_character,
+        R_character       => R_character,
+        A_character       => A_character,
+        Q_character       => Q_character,
+        ERROR_CONFIG      => ERROR_CONFIG,
+        SCRAMBLING        => SCRAMBLING,
+        SUBCLASSV         => SUBCLASSV,
+        F                 => F,
+        K                 => K)
       port map (
-        ci_char_clk       => ci_char_clk,
-        ci_frame_clk      => ci_frame_clk,
-        ci_reset          => ci_reset,
-        do_lane_config    => lane_configuration_array(i),
-        co_lane_ready     => data_link_ready_vector(i),
-        ci_lane_start     => data_link_start,
-        ci_request_sync   => request_sync,
-        co_synced         => data_link_synced_vector(i),
-        di_10b            => di_transceiver_data(i),
-        do_aligned_chars  => data_link_aligned_chars_array(i),
-        co_frame_state    => data_link_frame_state_array(i));
+        ci_char_clk      => ci_char_clk,
+        ci_frame_clk     => ci_frame_clk,
+        ci_reset         => ci_reset,
+        do_lane_config   => lane_configuration_array(i),
+        co_lane_ready    => data_link_ready_vector(i),
+        ci_lane_start    => data_link_start,
+        ci_request_sync  => request_sync,
+        co_synced        => data_link_synced_vector(i),
+        di_10b           => di_transceiver_data(i),
+        do_aligned_chars => data_link_aligned_chars_array(i),
+        co_frame_state   => data_link_frame_state_array(i));
 
     descrambler_gen: if SCRAMBLING = '1' generate
       descrambler: entity work.descrambler
