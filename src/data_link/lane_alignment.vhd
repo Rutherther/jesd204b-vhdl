@@ -15,6 +15,7 @@ use work.data_link_pkg.all;
 
 entity lane_alignment is
   generic (
+    CHANNEL_WIDTH   : integer                      := 1;
     F               : integer range 1 to 256;  -- Number of octets in a frame
     K               : integer range 1 to 32;  -- Number of frames in a multiframe
     BUFFER_SIZE     : integer                      := 256;  -- How many octets to keep
@@ -23,21 +24,21 @@ entity lane_alignment is
 -- Character to send before the buffer is ready and started
 
   port (
-    ci_char_clk           : in  std_logic;  -- Character clock
+    ci_link_clk           : in  std_logic;  -- Link clock
     ci_reset              : in  std_logic;  -- Reset (asynchronous, active low)
     ci_start              : in  std_logic;  -- Start sending the data from the
                                             -- buffer.
-    ci_state              : in  link_state;  -- State of the lane
+    ci_state              : in  link_state;       -- State of the lane
     ci_realign            : in  std_logic;  -- Whether to realign to the last
                                             -- found alignment character
-    di_char               : in  character_vector;  -- Character from 8b10b decoder
+    di_chars              : in  character_array;  -- Character from 8b10b decoder
     co_ready              : out std_logic;  -- Whether /A/ was received and
                                             -- waiting for start
     co_aligned            : out std_logic;  -- Whether the alignment is still correct
-    co_correct_sync_chars : out integer;  -- How many alignment characters on
-                                          -- correct place were found in a row
+    co_correct_sync_chars : out integer;    -- How many alignment characters on
+                                        -- correct place were found in a row
     co_error              : out std_logic;  -- Whether there is an error
-    do_char               : out character_vector);  -- The aligned output character
+    do_chars              : out character_array);  -- The aligned output character
 
 end entity lane_alignment;
 
@@ -59,6 +60,7 @@ architecture a1 of lane_alignment is
   signal next_error       : std_logic                        := '0';
 begin  -- architecture a1
   set_next : process (ci_char_clk, ci_reset) is
+    variable ready : std_logic := '0';
   begin  -- process set_next
     if ci_reset = '0' then              -- asynchronous reset (active low)
       reg_write_index <= 0;
@@ -68,16 +70,29 @@ begin  -- architecture a1
       reg_error       <= '0';
       buff            <= (others => ('0', '0', '0', "00000000", '0'));
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
-      reg_write_index       <= next_write_index;
-      reg_read_index        <= next_read_index;
-      reg_ready             <= next_ready;
-      reg_started           <= next_started;
-      reg_error             <= next_error;
-      buff(reg_write_index).d8b <= di_char.d8b;
-      buff(reg_write_index).kout <= di_char.kout;
-      buff(reg_write_index).disparity_error <= di_char.disparity_error;
-      buff(reg_write_index).missing_error <= di_char.missing_error;
-      buff(reg_write_index).user_data <= '1' when ci_state = DATA else '0';
+      ready := reg_ready;
+      if ci_state = INIT or reg_ready = '0' then
+        ready := '0';
+        reg_read_index <= 0;
+        reg_write_index <= 0;
+      end if;
+
+      reg_write_index <= reg_write_index + CHANNEL_WIDTH;
+      reg_read_index  <= reg_read_index + CHANNEL_WIDTH;
+      reg_ready       <= ready;
+      reg_started     <= next_started;
+      reg_error       <= next_error;
+      for i in 0 to CHANNEL_WIDTH - 1 loop
+        -- if CGS, look for /R/, if /R/, set that as starting index
+        if ci_state = CGS then
+
+        end if;
+        buff((reg_write_index + i) mod BUFFER_SIZE).d8b             <= di_chars(i).d8b;
+        buff((reg_write_index + i) mod BUFFER_SIZE).kout            <= di_chars(i).kout;
+        buff((reg_write_index + i) mod BUFFER_SIZE).disparity_error <= di_chars(i).disparity_error;
+        buff((reg_write_index + i) mod BUFFER_SIZE).missing_error   <= di_chars(i).missing_error;
+        buff((reg_write_index + i) mod BUFFER_SIZE).user_data       <= '1' when ci_state = DATA else '0';
+      end loop;  -- i
     end if;
   end process set_next;
 
@@ -102,7 +117,7 @@ begin  -- architecture a1
                 '1' when reg_ready = '1' and reg_started = '0' and (reg_write_index = 0) else
                 '0';
 
-  do_char <= dummy_character when ci_state = INIT or reg_started = '0' else
-             buff(reg_read_index);
+  do_chars <= dummy_characters when ci_state = INIT or reg_started = '0' else
+             buff(reg_read_index to reg_read_index + CHANNEL);
 
 end architecture a1;

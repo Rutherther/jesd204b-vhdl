@@ -31,9 +31,9 @@ architecture a1 of char_alignment_tb is
       data_count => 10,
       synced_after => 4,
       expected_aligned_after => 4,
-      expected_alignment_index => 2,
-      data => (0 => "1111101000", 1 => "0000010100", 2 => "1010101011", 3 => "0101010110", 4 => "1110000001", 5 => "0001111111", 6 => "0000000000", others => "0000000000"),
-      expected_data => (0 => "0011111010", 1 => "1100000101", 2 => "1010101010", 3 => "0101010101", 4 => "1111100000", 5 => "0000011111", others => "0000000000")
+      expected_alignment_index => 1,
+      data => (0 => "0111110100", 1 => "0000010100", 2 => "1010101011", 3 => "0101010101", 4 => "1111000000", 5 => "0000111110", 6 => "0000000000", others => "0000000000"),
+      expected_data => (0 => "0011111010", 1 => "0000001010", 2 => "0101010101", 3 => "1010101010", 4 => "1111100000", 5 => "0000011111", others => "0000000000")
     )
   );
 
@@ -51,14 +51,14 @@ architecture a1 of char_alignment_tb is
   signal cycle_num : integer := 0;
 
 begin  -- architecture a1
-  uut: entity work.char_alignment
+  uut : entity work.char_alignment
     port map (
-      ci_char_clk => clk,
+      ci_link_clk => clk,
       ci_reset    => reset,
-      di_10b      => di_10b,
-      do_10b      => do_10b,
+      di_chars    => di_10b,
+      do_chars    => do_10b,
       ci_synced   => ci_synced,
-      co_aligned => co_aligned);
+      co_aligned  => co_aligned);
 
   clk_gen: process is
   begin -- process clk_gen
@@ -94,7 +94,7 @@ begin  -- architecture a1
         end if;
 
         if cycle >= test_vec.synced_after then
-          assert (do_10b = test_vec.expected_data(cycle - 3)) report "The data does not match, data index: " & integer'image(i) & ", expected: " & vec2str(test_vec.expected_data(cycle - 2)) & ", got: " & vec2str(do_10b) severity error;
+          assert (do_10b = test_vec.expected_data(cycle - 2)) report "The data does not match, data index: " & integer'image(i) & ", expected: " & vec2str(test_vec.expected_data(cycle - 2)) & ", got: " & vec2str(do_10b) severity error;
         end if;
 
         wait for clk_period;

@@ -14,6 +14,7 @@ use ieee.numeric_std.all;
 
 entity ilas_parser is
   generic (
+    CHANNEL_WIDTH     : integer                      := 1;
     F                 : integer range 1 to 256;  -- Number of octets in a frame
     K                 : integer range 1 to 32;  -- Number of frames in a multiframe
     K_character       : std_logic_vector(7 downto 0) := "10111100";  -- Character
@@ -30,7 +31,7 @@ entity ilas_parser is
     multiframes_count : integer range 1 to 32        := 4);
 
   port (
-    ci_char_clk        : in  std_logic;  -- Character clock
+    ci_link_clk        : in  std_logic;  -- Link clock
     ci_reset           : in  std_logic;  -- Reset (asynchonous, active low)
     ci_state           : in  link_state;  -- State of the lane
     di_char            : in  character_vector;  -- Character from 8b10b decoder
@@ -57,7 +58,6 @@ architecture a1 of ilas_parser is
 
   signal finished : std_logic := '0';
   signal err : std_logic := '0';
-
 
   function getOctetUpIndex (
     octet_index : integer range 0 to F*K+5)
@@ -104,7 +104,7 @@ begin  -- architecture a1
   -- and co_wrong_chksum or co_unexpected_char. Stop processing.
   -- The controller will then request new synchronization try.
 
-  set_next: process (ci_char_clk, ci_reset) is
+  set_next: process (ci_link_clk, ci_reset) is
   begin  -- process set_next
     if ci_reset = '0' then              -- asynchronous reset (active low)
       reg_octet_index <= 0;
@@ -117,10 +117,14 @@ begin  -- architecture a1
     end if;
   end process set_next;
 
-  check_chars: process (ci_char_clk, ci_reset) is
+  check_chars: process (ci_link_clk, ci_reset) is
     variable up_index : integer range 7 to link_config_length-1;
     variable processing_ilas : std_logic;
   begin  -- process check_chars
+    -- if in CGS, find first non /K/ character after 4 /K/ characters,
+    -- then move to ILS
+    -- take care that /R/ may be at any position, not just the first one.
+    -- store some kind of position information of the next link dta
     processing_ilas := next_processing_ilas or reg_processing_ilas;
     if ci_reset = '0' then              -- asynchronous reset (active low)
       err <= '0';
@@ -128,7 +132,7 @@ begin  -- architecture a1
       co_wrong_chksum <= '0';
       finished <= '0';
       link_config_data <= (others => '0');
-    elsif ci_char_clk'event and ci_char_clk = '1' and (processing_ilas = '0' or ci_state = INIT) then
+    elsif ci_link_clk'event and ci_link_clk = '1' and (processing_ilas = '0' or ci_state = INIT) then
       err <= '0';
       co_unexpected_char <= '0';
       co_wrong_chksum <= '0';

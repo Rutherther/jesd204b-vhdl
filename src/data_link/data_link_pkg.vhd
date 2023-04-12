@@ -11,18 +11,7 @@ package data_link_pkg is
     user_data      : std_logic;         -- Whether the data is user data (in
                                         -- DATA state, false otherwise)
   end record character_vector;
-
-  type frame_character is record
-    kout            : std_logic;  -- Whether the character is a control character
-    disparity_error : std_logic;  -- Whether there was a disparity error (if this is true, the character will still be correct)
-    missing_error   : std_logic;  -- Whether the character was not found in the table
-    d8b             : std_logic_vector(7 downto 0);  -- The decoded data
-    octet_index    : integer range 0 to 256;  -- The position of the octet in a
-                                              -- frame
-    frame_index    : integer range 0 to 32;  -- The position of the frame in multiframe
-    user_data      : std_logic;         -- Whether the data is user data (in
-                                        -- DATA state, false otherwise)
-  end record frame_character;
+  type character_array is array (natural range <>) of character_vector;
 
   type link_state is (
     INIT,                               -- Initial state, waiting for /K/ characters

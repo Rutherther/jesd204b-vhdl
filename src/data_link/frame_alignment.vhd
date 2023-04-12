@@ -19,22 +19,24 @@ use work.transport_pkg.all;
 
 entity frame_alignment is
   generic (
-    SCRAMBLING : std_logic; -- Whether data are scrambled
-    F : integer range 0 to 256 := 8; -- Number of octets in a frame
-    K : integer range 0 to 32 := 1; -- Number of frames in a multiframe
+    CHANNEL_WIDTH  : integer                      := 1;
+    SCRAMBLING     : std_logic;         -- Whether data are scrambled
+    F              : integer range 0 to 256       := 8;  -- Number of octets in a frame
+    K              : integer range 0 to 32        := 1;  -- Number of frames in a multiframe
+    BUFFER_SIZE    : integer                      := 2*F;
     sync_char      : std_logic_vector(7 downto 0) := "10111100";  -- K
                                                                   -- character
-                                                                  -- for syncing
+                                        -- for syncing
     A_char         : std_logic_vector(7 downto 0) := "01111100";  -- Last
                                                                   -- character
-                                                                  -- in multiframe
+                                        -- in multiframe
     F_char         : std_logic_vector(7 downto 0) := "11111100";  -- Last
                                                                   -- character
                                                                   -- in frame
     F_replace_data : std_logic_vector(7 downto 0) := "11111100";  -- The character to replace with upon receiving /F/ with scrambled data
     A_replace_data : std_logic_vector(7 downto 0) := "01111100");  -- The character to replace with upon receiving /A/ with scrambled data
   port (
-    ci_char_clk           : in  std_logic;  -- Character clock
+    ci_link_clk           : in  std_logic;  -- Character clock
     ci_frame_clk          : in  std_logic;  -- Frame clock
     ci_reset              : in  std_logic;  -- Reset (asynchronous, active low)
     ci_request_sync       : in  std_logic;  -- Whether sync is requested
@@ -78,24 +80,25 @@ architecture a1 of frame_alignment is
   signal reg_correct_sync_chars : integer := 0;
   signal reg_known_sync_char_position : integer range 0 to 256;
 
-  signal next_octet_index : integer range 0 to F := 0;
+  signal next_octet_index          : integer range 0 to F := 0;
   signal next_adjusted_octet_index : integer range 0 to F := 0;
 begin  -- architecture a1
-  data_buffer: entity work.ring_buffer
+  data_buffer : entity work.ring_buffer
     generic map (
-      BUFFER_SIZE    => F*2,
+      BUFFER_SIZE    => BUFFER_SIZE,
       READ_SIZE      => F,
+      WRITE_SIZE     => CHANNEL_WIDTH,
       CHARACTER_SIZE => 8)
     port map (
-      ci_clk                => ci_char_clk,
-      ci_reset              => ci_reset,
-      ci_adjust_position    => buffer_adjust_position,
-      ci_read               => ci_frame_clk,
-      di_character          => buffer_character,
-      co_read               => do_aligned_chars,
-      co_read_position      => buffer_read_position,
-      co_write_position     => buffer_write_position,
-      co_filled             => buffer_filled);
+      ci_clk             => ci_link_clk,
+      ci_reset           => ci_reset,
+      ci_adjust_position => buffer_adjust_position,
+      ci_read            => ci_frame_clk,
+      di_character       => buffer_character,
+      co_read            => do_aligned_chars,
+      co_read_position   => buffer_read_position,
+      co_write_position  => buffer_write_position,
+      co_filled          => buffer_filled);
 
   next_frame: process (ci_frame_clk) is
   begin  -- process next_frame
