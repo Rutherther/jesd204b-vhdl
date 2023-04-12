@@ -20,15 +20,15 @@ use work.data_link_pkg.all;
 
 entity link_controller is
   generic (
-    SUBCLASSV   : integer range 0 to 1 := 0;
-    F           : integer range 1 to 256;     -- Number of octets in a frame
-    K           : integer range 1 to 32;  -- Number of frames in a multiframe
-    K_character : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
+    CHANNEL_WIDTH : integer                      := 1;  -- Number of characters going in at once
+    F             : integer range 1 to 256;  -- Number of octets in a frame
+    K             : integer range 1 to 32;  -- Number of frames in a multiframe
+    K_character   : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
-    ci_frame_clk      : in std_logic;   -- Frame clock
-    ci_char_clk       : in std_logic;   -- Character clock
-    ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
-    di_char           : in character_vector;  -- Output character from 8b10b decoder
+    ci_frame_clk : in std_logic;        -- Frame clock
+    ci_link_clk  : in std_logic;        -- Link clock
+    ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
+    di_chars     : in character_array(0 to CHANNEL_WIDTH-1);  -- Output character from 8b10b decoder
 
     do_config : out link_config;  -- Config found in ILAS
 
@@ -71,36 +71,64 @@ architecture a1 of link_controller is
   signal reg_state : link_state := INIT;
   signal reg_k_counter : integer range 0 to 15 := 0;
 
-  signal ilas_finished : std_logic := '0';
-  signal ilas_error : std_logic := '0';
-  signal ilas_wrong_chksum : std_logic := '0';
+  signal ilas_finished        : std_logic := '0';
+  signal ilas_error           : std_logic := '0';
+  signal ilas_wrong_chksum    : std_logic := '0';
   signal ilas_unexpected_char : std_logic := '0';
+
+  signal any_missing_error   : std_logic;
+  signal any_disparity_error : std_logic;
 begin  -- architecture a1
-  ilas: entity work.ilas_parser
+  ilas : entity work.ilas_parser
     generic map (
-      F                  => F,
-      K                  => K)
+      CHANNEL_WIDTH => CHANNEL_WIDTH,
+      F             => F,
+      K             => K)
     port map (
       ci_char_clk        => ci_char_clk,
       ci_reset           => ci_reset,
       ci_state           => reg_state,
-      di_char            => di_char,
+      di_chars           => di_chars,
       do_config          => do_config,
       co_finished        => ilas_finished,
       co_error           => ilas_error,
       co_wrong_chksum    => ilas_wrong_chksum,
       co_unexpected_char => ilas_unexpected_char);
 
-  set_state: process (ci_char_clk, ci_reset) is
-    variable char_error : std_logic;
+  set_state: process (ci_link_clk, ci_reset) is
+    variable chars_error : std_logic := '0';
+    variable chars_missing_error : std_logic := '0';
+    variable chars_disparity_error : std_logic := '0';
+    variable k_count : integer := 0;
   begin  -- process set_state
     if ci_reset = '0' then              -- asynchronous reset (active low)
       reg_state <= INIT;
-    elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
-      char_error := di_char.disparity_error or di_char.missing_error;
+      reg_k_counter <= '0';
+      correct_8b10b_characters <= 0;
+    elsif ci_link_clk'event and ci_link_clk = '1' then  -- rising clock edge
+      k_count := reg_k_counter;
+      for i in 0 to CHANNEL_WIDTH - 1 loop
+        if di_chars(i).disparity_error = '1' then
+          chars_disparity_error := '1';
+        end if;
+        if di_chars(i).missing_error = '1' then
+          chars_missing_error := '1';
+        end if;
+
+        if di_chars(i).d8b = K_character and di_chars(i).kout = '1' then
+          k_count := k_count + 1;
+        else
+          k_count := 0;
+        end if;
+      end loop;  -- i
+      chars_error := chars_missing_error or chars_disparity_error;
 
       if correct_8b10b_characters < FULL_SYNCHRONIZATION_AFTER and char_error = '0' then
-        correct_8b10b_characters <= correct_8b10b_characters + 1;
+        if correct_8b10b_characters + CHANNEL_WIDTH > FULL_SYNCHRONIZATION_AFTER then
+          correct_8b10b_characters <= FULL_SYNCHRONIZATION_AFTER;
+        else
+          correct_8b10b_characters <= correct_8b10b_characters + CHANNEL_WIDTH;
+        end if;
       end if;
 
       if ci_resync = '1' or (full_synchronization = '0' and char_error = '1') then
@@ -109,15 +137,11 @@ begin  -- architecture a1
       elsif reg_state = CGS then
         if reg_k_counter < SYNC_COUNT then
           correct_8b10b_characters <= 1;
-          if di_char.d8b = K_character and di_char.kout = '1' then
-            reg_k_counter <= reg_k_counter + 1;
-          else
-            reg_k_counter <= 0;
-          end if;
-        elsif di_char.d8b /= K_character or di_char.kout = '0' then
+          reg_k_counter <= k_count;
+        elsif k_count = 0 then
           reg_state <= ILS;
         end if;
-      elsif di_char.d8b = K_character and di_char.kout = '1' then
+      elsif k_count > 0 then
         reg_state <= CGS;
         reg_k_counter <= 0;
       elsif reg_state = ILS then
@@ -137,9 +161,10 @@ begin  -- architecture a1
 
   co_synced <= synced;
   co_state <= reg_state;
+
   -- TODO: add ILAS errors, add CGS error in case sync does not happen for long
   -- time
-  co_error <= ci_lane_alignment_error or ci_frame_alignment_error or di_char.missing_error or di_char.disparity_error;
+  co_error <= ci_lane_alignment_error or ci_frame_alignment_error or any_missing_error or any_disparity_error;
   co_uncorrectable_error <= ilas_error;
 
 end architecture a1;

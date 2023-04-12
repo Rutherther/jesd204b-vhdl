@@ -28,6 +28,10 @@ entity data_link_layer is
     A_character       : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
     Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
                                         -- 2nd character
+    CHANNEL_WIDTH     : integer                      := 1; -- How many
+                                                           -- characters are on
+                                                           -- the input of the
+                                                           -- layer
     ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
                                                               -- buffer that is
                                                               -- used for
@@ -39,7 +43,7 @@ entity data_link_layer is
     F                 : integer range 1 to 256       := 2;  -- Number of octets in a frame
     K                 : integer range 1 to 32        := 1);  -- Number of frames in a mutliframe
   port (
-    ci_char_clk  : in std_logic;        -- Character clock
+    ci_link_clk  : in std_logic;        -- Link clk (character clk divided by CHANNEL_WIDTH)
     ci_frame_clk : in std_logic;        -- Frame clock
     ci_reset     : in std_logic;        -- Reset (asynchronous, active low)
 
@@ -53,15 +57,15 @@ entity data_link_layer is
 
     -- input, output
     co_synced        : out std_logic;  -- Whether the lane is synced
-    di_10b           : in  std_logic_vector(9 downto 0);  -- The 10b input character
+    di_chars           : in  std_logic_vector(10*CHANNEL_WIDTH-1 downto 0);  -- The 10b input characters
     do_aligned_chars : out std_logic_vector(8*F - 1 downto 0);
     co_frame_state   : out frame_state);  -- The aligned frame output character
 end entity data_link_layer;
 
 architecture a1 of data_link_layer is
-  signal char_alignment_do_10b : std_logic_vector(9 downto 0);
+  signal char_alignment_do_chars : std_logic_vector(10*CHANNEL_WIDTH-1 downto 0);
 
-  signal decoder_do_char : character_vector;
+  signal decoder_do_chars : character_array(0 to CHANNEL_WIDTH-1);
 
   signal error_handler_co_request_sync : std_logic;
 
@@ -69,7 +73,7 @@ architecture a1 of data_link_layer is
   signal lane_alignment_co_aligned            : std_logic;
   signal lane_alignment_co_error              : std_logic;
   signal lane_alignment_co_ready              : std_logic;
-  signal lane_alignment_do_char               : character_vector;
+  signal lane_alignment_do_char               : character_array(0 to CHANNEL_WIDTH-1);
   signal lane_alignment_co_correct_sync_chars : integer;
 
   signal frame_alignment_ci_request_sync       : std_logic;
@@ -123,12 +127,13 @@ begin  -- architecture a1
   link_controller_ci_resync <= error_handler_co_request_sync or ci_request_sync;
   link_controller : entity work.link_controller
     generic map (
-      SUBCLASSV => SUBCLASSV,
-      F => F,
-      K => K)
+      CHANNEL_WIDTH => CHANNEL_WIDTH,
+      SUBCLASSV     => SUBCLASSV,
+      F             => F,
+      K             => K)
     port map (
       ci_frame_clk               => ci_frame_clk,
-      ci_char_clk                => ci_char_clk,
+      ci_link_clk                => ci_link_clk,
       ci_reset                   => ci_reset,
       ci_resync                  => link_controller_ci_resync,
       ci_lane_alignment_error    => lane_alignment_co_error,
@@ -136,36 +141,43 @@ begin  -- architecture a1
       ci_lane_alignment_ready    => lane_alignment_co_ready,
       ci_frame_alignment_error   => frame_alignment_co_error,
       ci_frame_alignment_aligned => frame_alignment_co_aligned,
-      di_char                    => decoder_do_char,
+      di_chars                   => decoder_do_chars,
       co_synced                  => link_controller_co_synced,
       co_state                   => link_controller_co_state,
       do_config                  => link_controller_do_config);
 
   -- char alignment
-  char_alignment: entity work.char_alignment
+  char_alignment : entity work.char_alignment
+    generic map (
+      CHANNEL_WIDTH => CHANNEL_WIDTH)
     port map (
-      ci_char_clk => ci_char_clk,
+      ci_link_clk => ci_link_clk,
       ci_reset    => ci_reset,
       ci_synced   => link_controller_co_synced,
-      di_10b      => di_10b,
-      do_10b      => char_alignment_do_10b);
+      di_chars    => di_chars,
+      do_chars    => char_alignment_do_chars);
 
-  -- 8b10b decoder
-  an8b10b_decoder: entity work.an8b10b_decoder
-    port map (
-      ci_char_clk => ci_char_clk,
-      ci_reset    => ci_reset,
-      di_10b      => char_alignment_do_10b,
-      do_char      => decoder_do_char);
+  -- 8b10b decoders (for each character)
+  decode : for i in 0 to CHANNEL_WIDTH - 1 generate
+    constant lower_bit_position : integer := CHANNEL_WIDTH*10 - (i + 1)*10;
+  begin
+    an8b10b_decoder : entity work.an8b10b_decoder
+      port map (
+        ci_link_clk => ci_link_clk,
+        ci_reset    => ci_reset,
+        di_chars    => char_alignment_do_chars(lower_bit_position + 9 downto lower_bit_position),
+        do_chars    => decoder_do_chars(i));
+  end generate decode;
 
   -- lane alignment
   lane_alignment : entity work.lane_alignment
     generic map (
-      BUFFER_SIZE => ALIGN_BUFFER_SIZE,
-      F => F,
-      K => K)
+      CHANNEL_WIDTH => CHANNEL_WIDTH,
+      BUFFER_SIZE   => ALIGN_BUFFER_SIZE,
+      F             => F,
+      K             => K)
     port map (
-      ci_char_clk           => ci_char_clk,
+      ci_link_clk           => ci_link_clk,
       ci_reset              => ci_reset,
       ci_state              => link_controller_co_state,
       ci_realign            => lane_alignment_ci_realign,
@@ -178,11 +190,12 @@ begin  -- architecture a1
   -- frame alignment
   frame_alignment : entity work.frame_alignment
     generic map (
-      SCRAMBLING => SCRAMBLING,
-      F          => F,
-      K         => K)
+      CHANNEL_WIDTH => CHANNEL_WIDTH,
+      SCRAMBLING    => SCRAMBLING,
+      F             => F,
+      K             => K)
     port map (
-      ci_char_clk           => ci_char_clk,
+      ci_link_clk           => ci_link_clk,
       ci_frame_clk          => ci_frame_clk,
       ci_reset              => ci_reset,
       co_frame_state        => frame_alignment_co_frame_state,

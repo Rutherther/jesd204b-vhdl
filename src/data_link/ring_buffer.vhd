@@ -7,6 +7,7 @@ entity ring_buffer is
   generic (
     CHARACTER_SIZE : integer := 8;
     BUFFER_SIZE : integer;
+    WRITE_SIZE : integer := 1;
     READ_SIZE : integer);      -- The size of the buffer
 
   port (
@@ -15,7 +16,7 @@ entity ring_buffer is
     ci_adjust_position : in  integer range -READ_SIZE/2-1 to READ_SIZE/2+1;
     ci_read            : in  std_logic;   -- One to read in current cycle, Zero
                                         -- to stay on current reading position
-    di_character       : in  std_logic_vector(CHARACTER_SIZE-1 downto 0);  -- The character to save on next clock
+    di_character       : in  std_logic_vector(CHARACTER_SIZE*WRITE_SIZE-1 downto 0);  -- The character to save on next clock
     co_read            : out std_logic_vector(CHARACTER_SIZE*READ_SIZE - 1 downto 0);  -- The output characters read from the buffer
     co_size            : out integer;   -- The current count of filled data
     co_read_position   : out integer;   -- The current read position inside of
@@ -68,7 +69,7 @@ begin  -- architecture a1
             end if;
 
             adjusted_read_position <= read_position + ci_adjust_position;
-            buff(CHARACTER_SIZE*BUFFER_SIZE-1 - CHARACTER_SIZE*write_position downto CHARACTER_SIZE*BUFFER_SIZE - CHARACTER_SIZE*(write_position + 1)) <= di_character;
+            buff(CHARACTER_SIZE*BUFFER_SIZE-1 - CHARACTER_SIZE*WRITE_SIZE*write_position downto CHARACTER_SIZE*BUFFER_SIZE - CHARACTER_SIZE*WRITE_SIZE*(write_position + 1)) <= di_character;
             write_position <= (write_position + 1) mod BUFFER_SIZE;
         end if;
     end process read;
