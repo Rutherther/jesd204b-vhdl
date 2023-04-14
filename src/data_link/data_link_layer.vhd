@@ -93,6 +93,9 @@ begin  -- architecture a1
   co_frame_state <= frame_alignment_co_frame_state;
   co_synced <= link_controller_co_synced;
 
+  lane_alignment_co_aligned <= '1';
+  lane_alignment_co_error <= '0';
+
   frame_alignment_ci_request_sync <= not link_controller_co_synced;
 
   -- DATA LINK LAYER
