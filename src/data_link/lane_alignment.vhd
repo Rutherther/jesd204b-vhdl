@@ -77,7 +77,11 @@ begin  -- architecture a1
       buff(reg_write_index).kout <= di_char.kout;
       buff(reg_write_index).disparity_error <= di_char.disparity_error;
       buff(reg_write_index).missing_error <= di_char.missing_error;
-      buff(reg_write_index).user_data <= '1' when ci_state = DATA else '0';
+		if ci_state = DATA then
+			buff(reg_write_index).user_data <= '1';
+		else
+			buff(reg_write_index).user_data <= '0';
+		end if;
     end if;
   end process set_next;
 
