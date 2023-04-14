@@ -90,13 +90,13 @@ begin  -- architecture a1
                        '0';
 
   next_missing_count <= 0 when next_index = 0 else
-                        next_missing_count when di_char.missing_error = '0' else
-                        next_missing_count + 1;
+                        reg_missing_count when di_char.missing_error = '0' else
+                        reg_missing_count + 1;
   next_disparity_count <= 0 when next_index = 0 else
-                        next_disparity_count when di_char.disparity_error = '0' else
-                        next_disparity_count + 1;
+                        reg_disparity_count when di_char.disparity_error = '0' else
+                        reg_disparity_count + 1;
   next_unexpected_count <= 0 when next_index = 0 else
-                          next_unexpected_count when ci_state = DATA and di_char.kout = '1' and not (di_char.d8b = "11111100" or di_char.d8b = "01111100") else
-                          next_unexpected_count + 1;
+                          reg_unexpected_count when ci_state = DATA and di_char.kout = '1' and not (di_char.d8b = "11111100" or di_char.d8b = "01111100") else
+                          reg_unexpected_count + 1;
 
 end architecture a1;
