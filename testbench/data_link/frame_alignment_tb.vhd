@@ -14,7 +14,7 @@ architecture a1 of frame_alignment_tb is
   type test_vector is record
     ci_request_sync : std_logic;
     ci_realign : std_logic;
-    di_char : character_vector;
+    di_char : link_character;
 
     expected_aligned : std_logic;
     expected_error : std_logic;
@@ -71,7 +71,7 @@ architecture a1 of frame_alignment_tb is
   signal frame_clk : std_logic := '0';
   signal reset : std_logic := '0';
 
-  signal di_char : character_vector;
+  signal di_char : link_character;
   signal do_aligned_chars : std_logic_vector(8*F - 1 downto 0);
   signal co_frame_state : frame_state;
 

@@ -7,13 +7,13 @@ use work.transport_pkg.all;
 entity jesd204b_multipoint_link_rx is
 
   generic (
-    K_character          : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_character          : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_CHAR          : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_CHAR          : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_character          : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_CHAR          : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_character          : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
-    DATA_RATE_MULT       : integer;  -- DEVICE_CLK_FREQ*this is lane bit rate
+    Q_CHAR          : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    DATA_RATE       : integer;  -- DEVICE_CLK_FREQ*this is lane bit rate
                                      -- frame 2nd character
     MULTIFRAME_RATE      : integer;     -- F * K, should be the same for every
                                         -- device
@@ -37,7 +37,7 @@ entity jesd204b_multipoint_link_rx is
     ci_request_sync     : in  std_logic;
     co_nsynced          : out std_logic;
     co_error            : out std_logic;
-    di_transceiver_data : in  lane_input_array(0 to LANES - 1);
+    di_data : in  lane_input_array(0 to LANES - 1);
     do_samples          : out simple_samples_array(0 to LINKS - 1)(0 to CONFIG(0).M - 1, 0 to CONFIG(0).CS - 1);
     co_frame_state      : out frame_state_array(0 to LINKS - 1);
     co_correct_data     : out std_logic);
@@ -94,7 +94,7 @@ begin  -- architecture a1
     generic map (
       SUBCLASSV => CONFIG(0).SUBCLASSV,
       N         => LINKS,
-      INVERSE   => '1')
+      INVERT   => '1')
     port map (
       ci_frame_clk      => ci_frame_clk,
       ci_multiframe_clk => multiframe_clk,
@@ -106,7 +106,7 @@ begin  -- architecture a1
   lmfc_generation: entity work.lmfc_generation
     generic map (
       MULTIFRAME_RATE => MULTIFRAME_RATE,
-      DATA_RATE_MULT  => DATA_RATE_MULT)
+      DATA_RATE  => DATA_RATE)
     port map (
       ci_device_clk     => ci_device_clk,
       ci_reset          => ci_reset,
@@ -118,10 +118,10 @@ begin  -- architecture a1
   links_rx : for i in 0 to LINKS - 1 generate
     link : entity work.jesd204b_link_rx
       generic map (
-        K_character       => K_character,
-        R_character       => R_character,
-        A_character       => A_character,
-        Q_character       => Q_character,
+        K_CHAR       => K_CHAR,
+        R_CHAR       => R_CHAR,
+        A_CHAR       => A_CHAR,
+        Q_CHAR       => Q_CHAR,
         ERROR_CONFIG      => ERROR_CONFIG,
         ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
         RX_BUFFER_DELAY   => RX_BUFFER_DELAY,
@@ -150,7 +150,7 @@ begin  -- architecture a1
       ci_request_sync     => ci_request_sync,
       co_nsynced          => links_nsynced(i),
       co_error            => links_error(i),
-      di_transceiver_data => di_transceiver_data(sumCummulativeLanes(i) to sumCummulativeLanes(i) + CONFIG(i).L - 1),
+      di_data => di_data(sumCummulativeLanes(i) to sumCummulativeLanes(i) + CONFIG(i).L - 1),
       do_samples          => do_samples(i),  -- do_samples(sumCummulativeConverters(i) to sumCummulativeConverters(i) + CONFIG(i).M - 1),
       co_frame_state      => co_frame_state(i),
       co_correct_data     => links_correct_data(i));

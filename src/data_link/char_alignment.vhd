@@ -17,7 +17,7 @@ use ieee.std_logic_1164.all;
 entity char_alignment is
 
   generic (
-    sync_char : std_logic_vector(9 downto 0) := "0011111010"  -- The character used for synchronization (positive RD)
+    K_CHAR : std_logic_vector(9 downto 0) := "0011111010"  -- The character used for synchronization (positive RD)
     );
   port (
     ci_char_clk: in std_logic;          -- The character clock
@@ -77,9 +77,9 @@ begin  -- architecture a1
       -- Try to find /K/ character again and again until ci_synced is one (that
       -- will be set by 8b10b_decoder)
       if ci_synced = '0' then
-        -- Try to find /K/ (sync_char) in either RD (either sync_char or not sync_char).
+        -- Try to find /K/ (K_CHAR) in either RD (either K_CHAR or not K_CHAR).
         for i in 0 to 9 loop
-          if reg_cache_10b(i+9 downto i) = sync_char or reg_cache_10b(i+9 downto i) = not sync_char then
+          if reg_cache_10b(i+9 downto i) = K_CHAR or reg_cache_10b(i+9 downto i) = not K_CHAR then
             reg_found_sync_char <= '1';
             reg_alignment_index <= i;
           end if;

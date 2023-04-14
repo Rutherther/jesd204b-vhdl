@@ -23,7 +23,7 @@ entity error_handler is
                                                        -- active low)
     ci_state                         : in link_state;  -- State of the lane.
 
-    di_char                          : in  character_vector;  -- Character from
+    di_char                          : in  link_character;  -- Character from
                                                               -- 8b10b decoder
 
     ci_lane_alignment_error          : in  std_logic;  -- Signals an error with

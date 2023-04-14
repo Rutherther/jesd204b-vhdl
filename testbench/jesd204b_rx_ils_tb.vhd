@@ -126,7 +126,7 @@ architecture a1 of jesd204b_rx_ils_tb is
   constant char_clk_period : time := 1 ns;    -- The clock period
   constant frame_clk_period : time := 1 ns * F;    -- The clock period
 
-  signal di_transceiver_data : lane_input_array(L-1 downto 0);
+  signal di_data : lane_input_array(L-1 downto 0);
   signal di_lane_data : lane_data_array(L-1 downto 0);
 
   signal char_clk : std_logic := '0';        -- The clock
@@ -159,7 +159,7 @@ begin  -- architecture a1
       ci_multiframe_clk   => '0',
       ci_reset            => reset,
       ci_request_sync     => '0',
-      di_transceiver_data => di_transceiver_data,
+      di_data => di_data,
       co_nsynced          => co_nsynced,
       co_error            => co_error,
       do_samples          => do_samples,
@@ -173,7 +173,7 @@ begin  -- architecture a1
         ena     => '1',
         KI      => di_lane_data(i).k,
         datain  => di_lane_data(i).data,
-        dataout => di_transceiver_data(i));
+        dataout => di_data(i));
   end generate encoders;
 
   char_clk <= not char_clk after char_clk_period/2;

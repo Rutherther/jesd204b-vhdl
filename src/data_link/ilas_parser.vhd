@@ -16,24 +16,23 @@ entity ilas_parser is
   generic (
     F                 : integer range 1 to 256;  -- Number of octets in a frame
     K                 : integer range 1 to 32;  -- Number of frames in a multiframe
-    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- Character
+    K_CHAR       : std_logic_vector(7 downto 0) := "10111100";  -- Character
                                         -- for syncing
-    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
+    R_CHAR       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
                                         -- multiframe
                                         -- start character
-    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- ILAS
+    A_CHAR       : std_logic_vector(7 downto 0) := "01111100";  -- ILAS
                                         -- multiframe
                                         -- end character
-    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    Q_CHAR       : std_logic_vector(7 downto 0) := "10011100");  -- ILAS 2nd
                                         -- multiframe
                                         -- 2nd character
-    multiframes_count : integer range 1 to 32        := 4);
 
   port (
     ci_char_clk        : in  std_logic;  -- Character clock
     ci_reset           : in  std_logic;  -- Reset (asynchonous, active low)
     ci_state           : in  link_state;  -- State of the lane
-    di_char            : in  character_vector;  -- Character from 8b10b decoder
+    di_char            : in  link_character;  -- Character from 8b10b decoder
     do_config          : out link_config;  -- Config found in ILAS
     co_finished        : out std_logic;  -- The ILAS was received correctly
     co_error           : out std_logic;  -- The ILAS was not received correctly
@@ -44,6 +43,7 @@ entity ilas_parser is
 end entity ilas_parser;
 
 architecture a1 of ilas_parser is
+  constant multiframes_count : integer := 4;
   constant link_config_length : integer := 112;
   signal octets_in_multiframe : integer range 0 to 8192 := 0;
   signal link_config_data : std_logic_vector(link_config_length-1 downto 0) := (others => '0');
@@ -146,25 +146,25 @@ begin  -- architecture a1
       -- If there is an error, stop processing.
     elsif ci_char_clk'event and ci_char_clk = '1' and processing_ilas = '1' then  -- rising clock edge
       if reg_octet_index = 0 then       -- Should be /R/
-        if di_char.d8b /= R_character or di_char.kout = '0' then
+        if di_char.d8b /= R_CHAR or di_char.kout = '0' then
           err <= '1';
           co_unexpected_char <= '1';
         end if;
-      elsif di_char.d8b = R_character and di_char.kout = '1' then
+      elsif di_char.d8b = R_CHAR and di_char.kout = '1' then
         err <= '1';
         co_unexpected_char <= '1';
       elsif reg_octet_index = octets_in_multiframe - 1 then
-        if di_char.d8b /= A_character or di_char.kout = '0' then  -- Should be /A/
+        if di_char.d8b /= A_CHAR or di_char.kout = '0' then  -- Should be /A/
           err <= '1';
           co_unexpected_char <= '1';
         elsif reg_multiframe_index = 3 and err = '0' then
           finished <= '1';
         end if;
-      elsif di_char.d8b = A_character and di_char.kout = '1' then
+      elsif di_char.d8b = A_CHAR and di_char.kout = '1' then
         err <= '1';
         co_unexpected_char <= '1';
       elsif reg_multiframe_index = 1 then
-        if reg_octet_index = 1 and (di_char.d8b /= Q_character or di_char.kout = '0') then  -- Should be /Q/
+        if reg_octet_index = 1 and (di_char.d8b /= Q_CHAR or di_char.kout = '0') then  -- Should be /Q/
           err <= '1';
           co_unexpected_char <= '1';
         elsif reg_octet_index > 1 and reg_octet_index < 16 then    -- This is config data
@@ -186,13 +186,13 @@ begin  -- architecture a1
     end if;
   end process check_chars;
 
-  co_finished <= '1' when finished = '1' or (di_char.kout = '1' and di_char.d8b = A_character and reg_octet_index = octets_in_multiframe - 1 and reg_multiframe_index = 3) else '0';
+  co_finished <= '1' when finished = '1' or (di_char.kout = '1' and di_char.d8b = A_CHAR and reg_octet_index = octets_in_multiframe - 1 and reg_multiframe_index = 3) else '0';
   co_error <= '1' when err = '1' and ci_state = ILS else '0';
 
   next_processing_ilas <= '0' when ci_state = INIT or finished = '1' else
                           '0' when ci_state = CGS and reg_processing_ilas = '1' else
                           '0' when reg_multiframe_index = 3 and reg_octet_index = octets_in_multiframe - 1 else
-                          '1' when ci_state = CGS and not (di_char.d8b = K_character and di_char.kout = '1') else
+                          '1' when ci_state = CGS and not (di_char.d8b = K_CHAR and di_char.kout = '1') else
                           '1' when reg_processing_ilas = '1' or ci_state = ILS else
                           '0';
 

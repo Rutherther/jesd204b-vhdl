@@ -67,7 +67,7 @@ architecture a1 of jesd204b_rx_kchars_tb is
   constant char_clk_period : time := 1 ns;    -- The clock period
   constant frame_clk_period : time := 1 ns * F;    -- The clock period
 
-  signal di_transceiver_data : lane_input_array(L-1 downto 0);
+  signal di_data : lane_input_array(L-1 downto 0);
 
   signal char_clk : std_logic := '0';        -- The clock
   signal frame_clk : std_logic := '0';        -- The clock
@@ -99,7 +99,7 @@ begin  -- architecture a1
       ci_multiframe_clk   => '0',
       ci_reset            => reset,
       ci_request_sync     => '0',
-      di_transceiver_data => di_transceiver_data,
+      di_data => di_data,
       co_nsynced          => co_nsynced,
       co_error            => co_error,
       do_samples          => do_samples,
@@ -117,11 +117,11 @@ begin  -- architecture a1
       test_vec_index <= i;
       if i = 0 then
         for c in 0 to L-1 loop
-          di_transceiver_data(c) <= char_prepend & test_vectors(0).data(c)(9 downto char_offset);
+          di_data(c) <= char_prepend & test_vectors(0).data(c)(9 downto char_offset);
         end loop;  -- l
       else
         for c in 0 to L-1 loop
-          di_transceiver_data(c) <= test_vectors(i-1).data(c)(char_offset - 1 downto 0) & test_vectors(i).data(c)(9 downto char_offset);
+          di_data(c) <= test_vectors(i-1).data(c)(char_offset - 1 downto 0) & test_vectors(i).data(c)(9 downto char_offset);
         end loop;  -- l
       end if;
       wait for char_clk_period;

@@ -50,7 +50,7 @@ architecture a1 of an8b10bdecoder_tb is
   signal co_missing_error : std_logic;
   signal co_disparity_error : std_logic;
 
-  signal char : character_vector := ('0', '0', '0', "00000000", '0');
+  signal char : link_character := ('0', '0', '0', "00000000", '0');
   signal test_data_index : integer := 0;
 begin  -- architecture a1
   uut: entity work.an8b10b_decoder

@@ -20,7 +20,7 @@ entity an8b10b_decoder is
     ci_char_clk : in  std_logic;        -- The character clock
     ci_reset    : in  std_logic;        -- The reset (asynchronous active low)
     di_10b      : in  std_logic_vector(9 downto 0);  -- The 8b10b encoded input data
-    do_char     : out character_vector;  -- The output decoded 8b data
+    do_char     : out link_character;  -- The output decoded 8b data
     co_error    : out std_logic);       -- Whether there is an error (disparity
                                         -- or missing)
 end entity an8b10b_decoder;

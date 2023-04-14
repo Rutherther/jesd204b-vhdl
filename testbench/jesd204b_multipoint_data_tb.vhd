@@ -142,7 +142,7 @@ architecture a1 of jesd204b_multipoint_rx_data_tb is
   constant frame_clk_period : time := 1 ns * CONFIG(0).F;    -- The clock period
   constant sysref_period : time := char_clk_period * CONFIG(0).K * CONFIG(0).F;    -- The clock period
 
-  signal di_transceiver_data : lane_input_array(0 to LANES-1);
+  signal di_data : lane_input_array(0 to LANES-1);
   signal di_lane_data : lane_data_array(0 to LANES-1);
 
   signal sysref    : std_logic := '0';
@@ -161,7 +161,7 @@ architecture a1 of jesd204b_multipoint_rx_data_tb is
 begin  -- architecture a1
   uut : entity work.jesd204b_multipoint_link_rx
     generic map (
-      DATA_RATE_MULT => 10,
+      DATA_RATE => 10,
       MULTIFRAME_RATE => F*K,
       RX_BUFFER_DELAY => 6,
       LINKS      => LINKS,
@@ -175,7 +175,7 @@ begin  -- architecture a1
       ci_sysref           => sysref,
       ci_reset            => reset,
       ci_request_sync     => '0',
-      di_transceiver_data => di_transceiver_data,
+      di_data => di_data,
       co_nsynced          => co_nsynced,
       co_error            => co_error,
       do_samples          => do_samples,
@@ -189,7 +189,7 @@ begin  -- architecture a1
         ena     => '1',
         KI      => di_lane_data(i).k,
         datain  => di_lane_data(i).data,
-        dataout => di_transceiver_data(i));
+        dataout => di_data(i));
   end generate encoders;
 
   char_clk <= not char_clk after char_clk_period/2;

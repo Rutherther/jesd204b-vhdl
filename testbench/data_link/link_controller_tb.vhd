@@ -8,7 +8,7 @@ end entity link_controller_tb;
 
 architecture a1 of link_controller_tb is
   type test_vector is record
-    di_char                   : character_vector;
+    di_char                   : link_character;
     ci_resync                 : std_logic;
     ci_lane_alignment_error   : std_logic;
     ci_lane_alignment_aligned : std_logic;
@@ -201,7 +201,7 @@ architecture a1 of link_controller_tb is
   signal frame_clk : std_logic := '0';
   signal reset : std_logic := '0';
 
-  signal di_char : character_vector;
+  signal di_char : link_character;
   signal do_config : link_config;
 
   signal ci_resync : std_logic := '0';

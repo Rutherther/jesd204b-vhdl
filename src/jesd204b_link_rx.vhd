@@ -15,12 +15,12 @@ use work.jesd204b_pkg.all;
 
 entity jesd204b_link_rx is
   generic (
-    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_CHAR       : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_CHAR       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_CHAR       : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    Q_CHAR       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
     ADJCNT            : integer range 0 to 15        := 0;
     ADJDIR            : std_logic                    := '0';
@@ -57,7 +57,7 @@ entity jesd204b_link_rx is
     co_nsynced : out std_logic;  -- Whether receiver is synced (active low)
     co_error   : out std_logic;
 
-    di_transceiver_data : in  lane_input_array(0 to L-1);  -- Data from transceivers
+    di_data : in  lane_input_array(0 to L-1);  -- Data from transceivers
     do_samples          : out samples_array(0 to M - 1, 0 to S - 1);
     co_frame_state      : out frame_state;  -- Output samples
     co_correct_data     : out std_logic);  -- Whether samples are correct user
@@ -132,7 +132,7 @@ begin  -- architecture a1
     generic map (
       SUBCLASSV => SUBCLASSV,
       N         => L,
-      INVERSE   => '0')
+      INVERT   => '0')
     port map (
       ci_frame_clk      => ci_frame_clk,
       ci_multiframe_clk => ci_multiframe_clk,
@@ -194,10 +194,10 @@ begin  -- architecture a1
     data_link_layer : entity work.data_link_layer
       generic map (
         ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
-        K_character       => K_character,
-        R_character       => R_character,
-        A_character       => A_character,
-        Q_character       => Q_character,
+        K_CHAR       => K_CHAR,
+        R_CHAR       => R_CHAR,
+        A_CHAR       => A_CHAR,
+        Q_CHAR       => Q_CHAR,
         ERROR_CONFIG      => ERROR_CONFIG,
         SCRAMBLING        => SCRAMBLING,
         SUBCLASSV         => SUBCLASSV,
@@ -212,7 +212,7 @@ begin  -- architecture a1
         ci_lane_start    => data_link_start,
         ci_request_sync  => request_sync,
         co_synced        => data_link_synced_vector(i),
-        di_10b           => di_transceiver_data(i),
+        di_10b           => di_data(i),
         do_aligned_chars => data_link_aligned_chars_array(i),
         co_frame_state   => data_link_frame_state_array(i));
 

@@ -9,7 +9,7 @@ end entity ilas_parser_tb;
 architecture a1 of ilas_parser_tb is
   type test_vector is record
     ci_state : link_state;
-    di_char  : character_vector;
+    di_char  : link_character;
 
     expected_finished : std_logic;
     expected_error : std_logic;
@@ -237,7 +237,7 @@ architecture a1 of ilas_parser_tb is
 
   signal ci_state : link_state := INIT;
 
-  signal di_char : character_vector;
+  signal di_char : link_character;
   signal do_config : link_config;
 
   signal co_finished : std_logic;

@@ -10,9 +10,9 @@ architecture a1 of lane_alignment_tb is
   type test_vector is record
     ci_state : link_state;
     ci_start : std_logic;
-    di_char  : character_vector;
+    di_char  : link_character;
 
-    expected_char : character_vector;
+    expected_char : link_character;
     expected_ready : std_logic;
     expected_aligned : std_logic;
     expected_error : std_logic;
@@ -54,8 +54,8 @@ architecture a1 of lane_alignment_tb is
   signal ci_start : std_logic := '0';
   signal ci_state : link_state := INIT;
 
-  signal di_char : character_vector;
-  signal do_char : character_vector;
+  signal di_char : link_character;
+  signal do_char : link_character;
 
   signal co_aligned : std_logic;
   signal co_error : std_logic;

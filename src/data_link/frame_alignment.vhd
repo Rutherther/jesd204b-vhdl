@@ -22,17 +22,17 @@ entity frame_alignment is
     SCRAMBLING : std_logic; -- Whether data are scrambled
     F : integer range 0 to 256 := 8; -- Number of octets in a frame
     K : integer range 0 to 32 := 1; -- Number of frames in a multiframe
-    sync_char      : std_logic_vector(7 downto 0) := "10111100";  -- K
+    K_CHAR      : std_logic_vector(7 downto 0) := "10111100";  -- K
                                                                   -- character
                                                                   -- for syncing
-    A_char         : std_logic_vector(7 downto 0) := "01111100";  -- Last
+    A_CHAR         : std_logic_vector(7 downto 0) := "01111100";  -- Last
                                                                   -- character
                                                                   -- in multiframe
-    F_char         : std_logic_vector(7 downto 0) := "11111100";  -- Last
+    F_CHAR         : std_logic_vector(7 downto 0) := "11111100";  -- Last
                                                                   -- character
                                                                   -- in frame
-    F_replace_data : std_logic_vector(7 downto 0) := "11111100";  -- The character to replace with upon receiving /F/ with scrambled data
-    A_replace_data : std_logic_vector(7 downto 0) := "01111100");  -- The character to replace with upon receiving /A/ with scrambled data
+    F_REPLACE_CHAR : std_logic_vector(7 downto 0) := "11111100";  -- The character to replace with upon receiving /F/ with scrambled data
+    A_REPLACE_CHAR : std_logic_vector(7 downto 0) := "01111100");  -- The character to replace with upon receiving /A/ with scrambled data
   port (
     ci_char_clk           : in  std_logic;  -- Character clock
     ci_frame_clk          : in  std_logic;  -- Frame clock
@@ -40,7 +40,7 @@ entity frame_alignment is
     ci_request_sync       : in  std_logic;  -- Whether sync is requested
     ci_realign            : in  std_logic;  -- Whether to realign to last
                                             -- alignment character
-    di_char               : in  character_vector;  -- The received character
+    di_char               : in  link_character;  -- The received character
     co_aligned            : out std_logic;  -- Whether the alignment is right
     co_error              : out std_logic;  -- Whether there was an error with
                                             -- the alignment
@@ -187,15 +187,15 @@ begin  -- architecture a1
   is_wrong_char <= (is_f and not next_is_last_octet) or (is_a and not next_is_last_octet);
   buffer_character <= di_char.d8b when is_f = '0' and is_a = '0' else
                  reg_last_frame_data when SCRAMBLING = '0' else
-                 F_replace_data when is_f = '1' else
-                 A_replace_data;
+                 F_REPLACE_CHAR when is_f = '1' else
+                 A_REPLACE_CHAR;
 
   next_adjusted_octet_index <= (buffer_write_position - buffer_read_position - buffer_adjust_position) mod F;
   next_octet_index <= (buffer_write_position - buffer_read_position) mod F;
   next_is_last_octet <= '1' when next_adjusted_octet_index = F - 1 else '0';
 
-  is_f <= '1' when di_char.d8b = F_char and di_char.kout = '1' else '0';
-  is_a <= '1' when di_char.d8b = A_char and di_char.kout = '1' else '0';
+  is_f <= '1' when di_char.d8b = F_CHAR and di_char.kout = '1' else '0';
+  is_a <= '1' when di_char.d8b = A_CHAR and di_char.kout = '1' else '0';
 
   co_error <= '1' when reg_state = MISALIGNED else '0';
   co_aligned <= '1' when reg_state = ALIGNED else '0';

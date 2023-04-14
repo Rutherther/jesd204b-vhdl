@@ -23,12 +23,12 @@ entity link_controller is
     SUBCLASSV   : integer range 0 to 1 := 0;
     F           : integer range 1 to 256;     -- Number of octets in a frame
     K           : integer range 1 to 32;  -- Number of frames in a multiframe
-    K_character : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
+    K_CHAR : std_logic_vector(7 downto 0) := "10111100");  -- Sync character
   port (
     ci_frame_clk      : in std_logic;   -- Frame clock
     ci_char_clk       : in std_logic;   -- Character clock
     ci_reset          : in std_logic;   -- Reset (asynchronous, active low)
-    di_char           : in character_vector;  -- Output character from 8b10b decoder
+    di_char           : in link_character;  -- Output character from 8b10b decoder
 
     do_config : out link_config;  -- Config found in ILAS
 
@@ -109,15 +109,15 @@ begin  -- architecture a1
       elsif reg_state = CGS then
         if reg_k_counter < SYNC_COUNT then
           correct_8b10b_characters <= 1;
-          if di_char.d8b = K_character and di_char.kout = '1' then
+          if di_char.d8b = K_CHAR and di_char.kout = '1' then
             reg_k_counter <= reg_k_counter + 1;
           else
             reg_k_counter <= 0;
           end if;
-        elsif di_char.d8b /= K_character or di_char.kout = '0' then
+        elsif di_char.d8b /= K_CHAR or di_char.kout = '0' then
           reg_state <= ILS;
         end if;
-      elsif di_char.d8b = K_character and di_char.kout = '1' then
+      elsif di_char.d8b = K_CHAR and di_char.kout = '1' then
         reg_state <= CGS;
         reg_k_counter <= 0;
       elsif reg_state = ILS then

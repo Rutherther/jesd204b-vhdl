@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 entity lmfc_counter is
 
   generic (
-    DATA_RATE_MULT         : integer;   -- DEV_CLK_FREQ*this is the frequency
+    DATA_RATE         : integer;   -- DEV_CLK_FREQ*this is the frequency
                                         -- of data rate (bit rate)
     PHASE_ADJUST           : integer;   -- How many more clock cycles to wait
                                         -- after sysref until lmfc ticks
@@ -21,7 +21,7 @@ entity lmfc_counter is
 end entity lmfc_counter;
 
 architecture a1 of lmfc_counter is
-  constant COUNT_TO : integer := MULTIFRAME_RATE/(DATA_RATE_MULT/10);
+  constant COUNT_TO : integer := MULTIFRAME_RATE/(DATA_RATE/10);
 
   signal count : integer range 0 to COUNT_TO;
   signal prev_sysref : std_logic;

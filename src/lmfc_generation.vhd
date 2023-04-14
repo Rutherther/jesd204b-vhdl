@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 entity lmfc_generation is
   generic (
     MULTIFRAME_RATE : integer;
-    DATA_RATE_MULT  : integer);
+    DATA_RATE  : integer);
   port (
     ci_device_clk     : in  std_logic;
     ci_reset          : in  std_logic;
@@ -47,7 +47,7 @@ begin  -- architecture a1
 
   multiframe_gen: entity work.lmfc_counter
   generic map (
-    DATA_RATE_MULT  => DATA_RATE_MULT,
+    DATA_RATE  => DATA_RATE,
     PHASE_ADJUST    => 0,
     MULTIFRAME_RATE => MULTIFRAME_RATE)
   port map (

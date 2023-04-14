@@ -18,8 +18,8 @@ entity lane_alignment is
     F               : integer range 1 to 256;  -- Number of octets in a frame
     K               : integer range 1 to 32;  -- Number of frames in a multiframe
     BUFFER_SIZE     : integer                      := 256;  -- How many octets to keep
-    R_character     : std_logic_vector(7 downto 0) := "00011100";  -- The /R/ character
-    dummy_character : character_vector             := ('1', '0', '0', "10111100", '0'));
+    R_CHAR     : std_logic_vector(7 downto 0) := "00011100";  -- The /R/ character
+    DUMMY_CHAR : link_character             := ('1', '0', '0', "10111100", '0'));
 -- Character to send before the buffer is ready and started
 
   port (
@@ -30,19 +30,19 @@ entity lane_alignment is
     ci_state              : in  link_state;  -- State of the lane
     ci_realign            : in  std_logic;  -- Whether to realign to the last
                                             -- found alignment character
-    di_char               : in  character_vector;  -- Character from 8b10b decoder
+    di_char               : in  link_character;  -- Character from 8b10b decoder
     co_ready              : out std_logic;  -- Whether /A/ was received and
                                             -- waiting for start
     co_aligned            : out std_logic;  -- Whether the alignment is still correct
     co_correct_sync_chars : out integer;  -- How many alignment characters on
                                           -- correct place were found in a row
     co_error              : out std_logic;  -- Whether there is an error
-    do_char               : out character_vector);  -- The aligned output character
+    do_char               : out link_character);  -- The aligned output character
 
 end entity lane_alignment;
 
 architecture a1 of lane_alignment is
-  type buffer_array is array (0 to BUFFER_SIZE) of character_vector;
+  type buffer_array is array (0 to BUFFER_SIZE) of link_character;
   signal buff : buffer_array := (others => ('0', '0', '0', "00000000", '0'));
 
   signal reg_ready : std_logic := '0';
@@ -91,7 +91,7 @@ begin  -- architecture a1
                      0;
 
   next_ready <= '0' when ci_state = INIT else
-                '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = R_character and (ci_state = CGS or ci_state = ILS)) else
+                '1' when reg_ready = '1' or (di_char.kout = '1' and di_char.d8b = R_CHAR and (ci_state = CGS or ci_state = ILS)) else
                 '0';
   next_started <= '0' when reg_ready = '0' or ci_state = CGS else
                   '1' when (ci_start = '1' or reg_started = '1') else
@@ -102,7 +102,7 @@ begin  -- architecture a1
                 '1' when reg_ready = '1' and reg_started = '0' and (reg_write_index = 0) else
                 '0';
 
-  do_char <= dummy_character when ci_state = INIT or reg_started = '0' else
+  do_char <= DUMMY_CHAR when ci_state = INIT or reg_started = '0' else
              buff(reg_read_index);
 
 end architecture a1;

@@ -6,7 +6,7 @@ entity synced_combination is
   generic (
     SUBCLASSV : integer := 0;
     N : integer := 1;
-    INVERSE : std_logic := '0');
+    INVERT : std_logic := '0');
   port (
     ci_frame_clk : in std_logic;
     ci_multiframe_clk : in std_logic;
@@ -23,10 +23,10 @@ architecture a1 of synced_combination is
 
   signal nsynced : std_logic;
 begin  -- architecture a1
-  gen_nsynced: if INVERSE = '0' generate
+  gen_nsynced: if INVERT = '0' generate
     nsynced <= '0' when ci_synced_array = all_ones else '1';
   end generate gen_nsynced;
-  gen_nsynced_inverse: if INVERSE = '1' generate
+  gen_nsynced_inverse: if INVERT = '1' generate
     nsynced <= '0' when ci_synced_array = all_zeros else '1';
   end generate gen_nsynced_inverse;
 

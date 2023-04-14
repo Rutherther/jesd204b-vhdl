@@ -22,11 +22,11 @@ use work.transport_pkg.all;
 
 entity data_link_layer is
   generic (
-    K_character       : std_logic_vector(7 downto 0) := "10111100";  -- K sync character
-    R_character       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
+    K_CHAR       : std_logic_vector(7 downto 0) := "10111100";  -- K sync character
+    R_CHAR       : std_logic_vector(7 downto 0) := "00011100";  -- ILAS
                                         -- multiframe start
-    A_character       : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
-    Q_character       : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
+    A_CHAR       : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
+    Q_CHAR       : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
                                         -- 2nd character
     ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
                                                               -- buffer that is
@@ -61,7 +61,7 @@ end entity data_link_layer;
 architecture a1 of data_link_layer is
   signal char_alignment_do_10b : std_logic_vector(9 downto 0);
 
-  signal decoder_do_char : character_vector;
+  signal decoder_do_char : link_character;
 
   signal error_handler_co_request_sync : std_logic;
 
@@ -69,7 +69,7 @@ architecture a1 of data_link_layer is
   signal lane_alignment_co_aligned            : std_logic;
   signal lane_alignment_co_error              : std_logic;
   signal lane_alignment_co_ready              : std_logic;
-  signal lane_alignment_do_char               : character_vector;
+  signal lane_alignment_do_char               : link_character;
   signal lane_alignment_co_correct_sync_chars : integer;
 
   signal frame_alignment_ci_request_sync       : std_logic;

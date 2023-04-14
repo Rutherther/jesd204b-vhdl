@@ -3,14 +3,14 @@ use ieee.std_logic_1164.all;
 
 package data_link_pkg is
 
-  type character_vector is record
+  type link_character is record
     kout            : std_logic;  -- Whether the character is a control character
     disparity_error : std_logic;  -- Whether there was a disparity error (if this is true, the character will still be correct)
     missing_error   : std_logic;  -- Whether the character was not found in the table
     d8b             : std_logic_vector(7 downto 0);  -- The decoded data
     user_data      : std_logic;         -- Whether the data is user data (in
                                         -- DATA state, false otherwise)
-  end record character_vector;
+  end record link_character;
 
   type frame_character is record
     kout            : std_logic;  -- Whether the character is a control character
