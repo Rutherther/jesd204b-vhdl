@@ -53,11 +53,8 @@ architecture a1 of jesd204b_multipoint_link_rx is
   signal links_nsynced : std_logic_vector(LINKS - 1 downto 0);
 
   signal multiframe_clk : std_logic;
-  signal multiframe_aligned : std_logic;
-  signal multiframe_enable_sync : std_logic;
+  signal lmfc_aligned : std_logic;
   signal nsynced : std_logic;
-
-  signal reg_lmfc_aligned : std_logic;
 
   -- purpose: Count lanes before link with index link_index
   function sumCummulativeLanes (
@@ -89,59 +86,34 @@ architecture a1 of jesd204b_multipoint_link_rx is
     return converters_count;
   end function sumCummulativeConverters;
 begin  -- architecture a1
-  nsynced <= '0' when links_nsynced = all_zeros else '1';
-
   co_error <= '0' when links_error = all_zeros else '1';
   co_correct_data <= '1' when links_correct_data = all_ones else '0';
+  co_nsynced <= nsynced;
 
-  multiframe_subclass_0: if CONFIG(0).SUBCLASSV = 0 generate
-    co_nsynced <= nsynced;
-  end generate multiframe_subclass_0;
-
-  multiframe_subclass_1: if CONFIG(0).SUBCLASSV = 1 generate
-    sysref_alignment: process (ci_device_clk, ci_reset) is
-    begin  -- process sysref_alignment
-      if ci_reset = '0' then            -- asynchronous reset (active low)
-        reg_lmfc_aligned <= '0';
-        multiframe_enable_sync <= '0';
-      elsif ci_device_clk'event and ci_device_clk = '1' then  -- rising clock edge
-        if multiframe_enable_sync = '0' and reg_lmfc_aligned = '0' then
-          multiframe_enable_sync <= '1';
-        elsif reg_lmfc_aligned = '0' and multiframe_aligned = '1' then
-          reg_lmfc_aligned <= '1';
-          multiframe_enable_sync <= '0';
-        elsif co_nsynced = '0' and nsynced = '1' then
-          reg_lmfc_aligned <= '0';
-          multiframe_enable_sync <= '1';
-        end if;
-      end if;
-    end process sysref_alignment;
-    
-    set_multiframe_sync: process (multiframe_clk, ci_reset) is
-    begin  -- process set_multiframe_sync
-      if ci_reset = '0' then              -- asynchronous reset (active low)
-        co_nsynced <= '1';
-      elsif multiframe_clk'event and multiframe_clk = '1' then  -- rising clock edge
-        co_nsynced <= '1';
-        if nsynced = '0' and reg_lmfc_aligned = '1' then
-          co_nsynced <= '0';
-        end if;
-      end if;
-    end process set_multiframe_sync;
-  end generate multiframe_subclass_1;
-
-  multiframe_gen: entity work.lmfc_counter
+  sync_combination : entity work.synced_combination
     generic map (
-      DATA_RATE_MULT  => DATA_RATE_MULT,
-      PHASE_ADJUST    => 0,
-      MULTIFRAME_RATE => MULTIFRAME_RATE)
+      SUBCLASSV => CONFIG(0).SUBCLASSV,
+      N         => LINKS,
+      INVERSE   => '1')
+    port map (
+      ci_frame_clk      => ci_frame_clk,
+      ci_multiframe_clk => multiframe_clk,
+      ci_reset          => ci_reset,
+      ci_lmfc_aligned   => lmfc_aligned,
+      ci_synced_array   => links_nsynced,
+      co_nsynced        => nsynced);
+
+  lmfc_generation: entity work.lmfc_generation
+    generic map (
+      MULTIFRAME_RATE => MULTIFRAME_RATE,
+      DATA_RATE_MULT  => DATA_RATE_MULT)
     port map (
       ci_device_clk     => ci_device_clk,
       ci_reset          => ci_reset,
       ci_sysref         => ci_sysref,
-      ci_enable_sync    => multiframe_enable_sync,
-      co_aligned        => multiframe_aligned,
-      co_multiframe_clk => multiframe_clk);
+      ci_nsynced        => nsynced,
+      co_multiframe_clk => multiframe_clk,
+      co_lmfc_aligned   => lmfc_aligned);
 
   links_rx : for i in 0 to LINKS - 1 generate
     link : entity work.jesd204b_link_rx

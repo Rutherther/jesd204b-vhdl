@@ -128,33 +128,18 @@ architecture a1 of jesd204b_link_rx is
   end function ConfigsMatch;
 begin  -- architecture a1
   -- nsynced is active LOW, set '0' if all ready
-  nsynced_subclass_0: if SUBCLASSV = 0 generate
-    set_nsynced: process (ci_frame_clk, ci_reset) is
-    begin  -- process set_nsynced
-      if ci_reset = '0' then              -- asynchronous reset (active low)
-        co_nsynced <= '1';
-      elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
-        co_nsynced <= '1';
-        if data_link_synced_vector = all_ones then
-          co_nsynced <= '0';
-        end if;
-      end if;
-    end process set_nsynced;
-  end generate nsynced_subclass_0;
-
-  nsynced_subclass_1: if SUBCLASSV = 1 generate
-    set_nsynced: process (ci_multiframe_clk, ci_reset) is
-    begin  -- process set_nsynced
-      if ci_reset = '0' then              -- asynchronous reset (active low)
-        co_nsynced <= '1';
-      elsif ci_multiframe_clk'event and ci_multiframe_clk = '1' then  -- rising clock edge
-        co_nsynced <= '1';
-        if data_link_synced_vector = all_ones then
-          co_nsynced <= '0';
-        end if;
-      end if;
-    end process set_nsynced;
-  end generate nsynced_subclass_1;
+  sync_combination: entity work.synced_combination
+    generic map (
+      SUBCLASSV => SUBCLASSV,
+      N         => L,
+      INVERSE   => '0')
+    port map (
+      ci_frame_clk      => ci_frame_clk,
+      ci_multiframe_clk => ci_multiframe_clk,
+      ci_reset          => ci_reset,
+      ci_lmfc_aligned   => '1',
+      ci_synced_array   => data_link_synced_vector,
+      co_nsynced        => co_nsynced);
 
   request_sync_gen: process (ci_char_clk, ci_reset) is
   begin  -- process request_sync
