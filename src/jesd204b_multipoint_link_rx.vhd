@@ -104,6 +104,9 @@ begin  -- architecture a1
       co_nsynced        => nsynced);
 
   lmfc_generation: entity work.lmfc_generation
+    generic map (
+      MULTIFRAME_RATE => MULTIFRAME_RATE,
+      DATA_RATE_MULT  => DATA_RATE_MULT)
     port map (
       ci_device_clk     => ci_device_clk,
       ci_reset          => ci_reset,
