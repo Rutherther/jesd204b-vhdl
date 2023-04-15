@@ -55,8 +55,6 @@ architecture a1 of frame_alignment is
   type alignment_state is (INIT, ALIGNED, MISALIGNED);
   signal reg_state : alignment_state := INIT;
 
-  signal next_frame_state : frame_state;
-
   signal buffer_character : std_logic_vector(7 downto 0) := "00000000";
   signal buffer_raw_adjust_position : integer := 0;
   signal buffer_adjust_position : integer := 0;
@@ -80,6 +78,10 @@ architecture a1 of frame_alignment is
 
   signal next_octet_index : integer range 0 to F := 0;
   signal next_adjusted_octet_index : integer range 0 to F := 0;
+
+  constant frame_state_count : integer := 2;
+  signal reg_frame_state_index : integer := 0;
+  signal reg_frame_states : frame_state_array(0 to frame_state_count - 1);
 begin  -- architecture a1
   data_buffer: entity work.ring_buffer
     generic map (
@@ -101,64 +103,64 @@ begin  -- architecture a1
   begin  -- process next_frame
     if ci_reset = '0' then
       co_frame_state <= ('0', '0', '0', '0', '0', '0', '0', '0');
+      reg_frame_state_index <= 0;
     elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
-      co_frame_state <= next_frame_state;
+      co_frame_state <= reg_frame_states(reg_frame_state_index);
+      reg_frame_state_index <= (reg_frame_state_index + 1) mod frame_state_count;
     end if;
   end process next_frame;
 
   set_next: process (ci_char_clk, ci_frame_clk, ci_reset) is
   begin  -- process set_next
-    if ci_reset = '1' and ci_frame_clk'event and ci_frame_clk = '1' then
-      if reg_state /= INIT then
-        next_frame_state <= ('1', '0', '0', '0', '0', '0', '0', '0');
-      end if;
-    end if;
-
     if ci_reset = '0' then              -- asynchronous reset (active
       reg_state <= INIT;
       reg_last_frame_data <= (others => '0');
-      next_frame_state <= ('0', '0', '0', '0', '0', '0', '0', '0');
       buffer_align_to <= -1;
+      reg_frame_states <= (others => ('0', '0', '0', '0', '0', '0', '0', '0'));
     elsif ci_char_clk'event and ci_char_clk = '1' then  -- rising clock edge
       -- set last_frame_data if this is the last frame and not /F/ or /A/
       if next_is_last_octet = '1' and not (is_f = '1' or is_a = '1') then
         reg_last_frame_data <= di_char.d8b;
       end if;
+      for i in 0 to frame_state_count - 1 loop
+        if i = reg_frame_state_index then
+          if di_char.kout = '1' and not (is_a = '1' or is_f = '1') then
+            reg_frame_states(i).invalid_characters <= '1';
+          end if;
+          if di_char.disparity_error = '1' then
+            reg_frame_states(i).disparity_error <= '1';
+          end if;
+          if di_char.missing_error then
+            reg_frame_states(i).not_in_table_error <= '1';
+          end if;
+          if di_char.user_data = '0' then
+            reg_frame_states(i).user_data <= '0';
+          end if;
+          if (reg_state = ALIGNED and is_wrong_char = '1') or reg_state = MISALIGNED then
+            reg_frame_states(i).wrong_alignment <= '1';
+          end if;
+        else
+          reg_frame_states(i) <= ('1', '0', '0', '0', '0', '0', '0', '0');
+        end if;
+      end loop;  -- i
 
       if ci_request_sync = '1' then
         reg_state <= INIT;
-        next_frame_state <= ('0', '0', '0', '0', '0', '0', '0', '0');
       elsif reg_state = INIT then
-      next_frame_state <= ('0', '0', '0', '0', '0', '0', '0', '0');
         -- if a or f, align to it and move to aligned
         if is_a = '1' or is_f = '1' then
           -- align to current character.
           buffer_align_to <= next_octet_index;
-          next_frame_state <= ('1', '0', '0', '0', '0', '0', '0', '0');
           reg_state <= ALIGNED;
         end if;
       else
-        if di_char.kout = '1' and not (is_a = '1' or is_f = '1') then
-          next_frame_state.invalid_characters <= '1';
-        end if;
-        if di_char.disparity_error = '1' then
-          next_frame_state.disparity_error <= '1';
-        end if;
-        if di_char.missing_error then
-          next_frame_state.not_in_table_error <= '1';
-        end if;
-        if di_char.user_data = '0' then
-          next_frame_state.user_data <= '0';
-        end if;
         if reg_state = ALIGNED then
           if is_wrong_char = '1' then
-            next_frame_state.wrong_alignment <= '1';
             reg_state <= MISALIGNED;
             reg_correct_sync_chars <= 1;
             reg_known_sync_char_position <= next_octet_index;
           end if;
         elsif reg_state = MISALIGNED then
-          next_frame_state.wrong_alignment <= '1';
           if is_wrong_char = '1' then
             if reg_known_sync_char_position = next_octet_index then
               reg_correct_sync_chars <= reg_correct_sync_chars + 1;
