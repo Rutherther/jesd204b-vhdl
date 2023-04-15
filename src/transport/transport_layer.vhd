@@ -29,21 +29,18 @@ entity transport_layer is
     di_lanes_data   : in  lane_character_array(0 to L-1)(F*8-1 downto 0);  -- Data from the lanes
     ci_frame_states : in  frame_state_array(0 to L-1);
     co_frame_state  : out frame_state;
-    do_samples_data : out samples_array(0 to M - 1, 0 to S - 1));  -- The
-                                        -- output samples
+    do_samples      : out samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+    do_ctrl_bits    : out ctrl_bits_array(0 to M - 1, 0 to S - 1)(CS - 1 downto 0));
 end entity transport_layer;
 
 architecture a1 of transport_layer is
-  signal samples_data : samples_array
-    (0 to M - 1, 0 to S - 1)
-    (data(N - 1 downto 0), ctrl_bits(CS - 1 downto 0));
-  signal prev_samples_data : samples_array
-    (0 to M - 1, 0 to S - 1)
-    (data(N - 1 downto 0), ctrl_bits(CS - 1 downto 0));
-  signal next_samples_data : samples_array
-  (0 to M - 1, 0 to S - 1)
-    (data(N - 1 downto 0), ctrl_bits(CS - 1 downto 0));
-  signal reg_error         : std_logic;  -- if err, repeat last samples.
+  signal samples             : samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+  signal prev_samples        : samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+  signal next_samples        : samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+  signal ctrl_bits           : ctrl_bits_array(0 to M - 1, 0 to S - 1)(CS - 1 downto 0);
+  signal prev_ctrl_bits      : ctrl_bits_array(0 to M - 1, 0 to S - 1)(CS - 1 downto 0);
+  signal next_ctrl_bits      : ctrl_bits_array(0 to M - 1, 0 to S - 1)(CS - 1 downto 0);
+  signal reg_error           : std_logic;  -- if err, repeat last samples.
   signal current_frame_state : frame_state;
 
   signal reg_buffered_data : std_logic_vector(L*F*8-1 downto 0) := (others => '0');
@@ -67,11 +64,13 @@ begin  -- architecture a1
       reg_error <= '0';
       reg_buffered_data <= (others => '0');
     elsif ci_frame_clk'event and ci_frame_clk = '1' then  -- rising clock edge
-      do_samples_data <= next_samples_data;
+      do_samples <= next_samples;
+      do_ctrl_bits <= next_ctrl_bits;
       co_frame_state <= current_frame_state;
 
       if any_error = '0' then
-        prev_samples_data <= samples_data;
+        prev_samples <= samples;
+        prev_ctrl_bits <= ctrl_bits;
       end if;
 
       for i in 0 to L-1 loop
@@ -104,20 +103,21 @@ begin  -- architecture a1
                current_frame_state.disparity_error = '1' or
                current_frame_state.not_in_table_error = '1' or
                current_frame_state.wrong_alignment = '1' else '0';
-  next_samples_data <= samples_data when any_error = '0' else prev_samples_data;
+  next_samples <= samples when any_error = '0' else prev_samples;
+  next_ctrl_bits <= ctrl_bits when any_error = '0' else prev_ctrl_bits;
 
   -- for one or multiple lanes if CF = 0
   -- (no control words)
   -- (control chars are right after sample)
   multi_lane_no_cf: if CF = 0 generate
     converters: for ci in 0 to M - 1 generate
-      samples: for si in 0 to S - 1 generate
-        samples_data(ci, si).data <= reg_buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn downto L*F*8 - 1 - ci*Nn*S - si*Nn - N + 1);
+      assign_samples: for si in 0 to S - 1 generate
+        samples(ci, si) <= reg_buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn downto L*F*8 - 1 - ci*Nn*S - si*Nn - N + 1);
 
         control_bits: if CS > 0 generate
-          samples_data(ci, si).ctrl_bits <= reg_buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn - N downto L*F*8 - 1 - ci*Nn*S - si*Nn - N - CS + 1);
+          ctrl_bits(ci, si) <= reg_buffered_data(L*F*8 - 1 - ci*Nn*S - si*Nn - N downto L*F*8 - 1 - ci*Nn*S - si*Nn - N - CS + 1);
         end generate control_bits;
-      end generate samples;
+      end generate assign_samples;
     end generate converters;
   end generate multi_lane_no_cf;
 
@@ -126,13 +126,13 @@ begin  -- architecture a1
   multi_lane_cf: if CF > 0 generate
     cf_groups: for cfi in 0 to CF-1 generate
       converters: for ci in 0 to M/CF-1 generate
-        samples: for si in 0 to S - 1 generate
-          samples_data(ci + cfi*M/CF, si).data <= reg_buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn downto L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn - N + 1);
+        assign_samples: for si in 0 to S - 1 generate
+          samples(ci + cfi*M/CF, si) <= reg_buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn downto L*F*8 - 1 - cfi*F*8*L/CF - ci*Nn*S - si*Nn - N + 1);
 
           control_bits: if CS > 0 generate
-            samples_data(ci + cfi*M/CF, si).ctrl_bits <= reg_buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*S*Nn - ci*S*CS - si*CS downto L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*Nn*S - ci*S*CS - si*CS - CS + 1);
+            ctrl_bits(ci + cfi*M/CF, si) <= reg_buffered_data(L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*S*Nn - ci*S*CS - si*CS downto L*F*8 - 1 - cfi*F*8*L/CF - (M/CF)*Nn*S - ci*S*CS - si*CS - CS + 1);
           end generate control_bits;
-        end generate samples;
+        end generate assign_samples;
       end generate converters;
     end generate cf_groups;
   end generate multi_lane_cf;

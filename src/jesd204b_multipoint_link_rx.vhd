@@ -7,40 +7,41 @@ use work.transport_pkg.all;
 entity jesd204b_multipoint_link_rx is
 
   generic (
-    K_CHAR          : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
-    R_CHAR          : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
+    K_CHAR            : std_logic_vector(7 downto 0) := "10111100";  -- Sync character
+    R_CHAR            : std_logic_vector(7 downto 0) := "00011100";  -- ILAS first
                                         -- frame character
-    A_CHAR          : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
+    A_CHAR            : std_logic_vector(7 downto 0) := "01111100";  -- Multiframe
                                         -- alignment character
-    Q_CHAR          : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
-    DATA_RATE       : integer;  -- DEVICE_CLK_FREQ*this is lane bit rate
+    Q_CHAR            : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
+    DATA_RATE         : integer;  -- DEVICE_CLK_FREQ*this is lane bit rate
                                      -- frame 2nd character
-    MULTIFRAME_RATE      : integer;     -- F * K, should be the same for every
+    MULTIFRAME_RATE   : integer;        -- F * K, should be the same for every
                                         -- device
     ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
                                                               -- buffer that is
                                                               -- used for
                                                               -- aligning lanes
-    RX_BUFFER_DELAY      : integer range 1 to 32        := 1;
-    LINKS                : integer;     -- Count of links
-    LANES                : integer;     -- Total nubmer of lanes
-    CONVERTERS           : integer;     -- Total number of converters
-    CONFIG               : link_config_array(0 to LINKS - 1);
-    ERROR_CONFIG         : error_handling_config        := (2, 0, 5, 5, 5));
+    RX_BUFFER_DELAY   : integer range 1 to 32        := 1;
+    LINKS             : integer;        -- Count of links
+    LANES             : integer;        -- Total nubmer of lanes
+    CONVERTERS        : integer;        -- Total number of converters
+    CONFIG            : link_config_array(0 to LINKS - 1);
+    ERROR_CONFIG      : error_handling_config        := (2, 0, 5, 5, 5));
 
   port (
-    ci_device_clk       : in  std_logic;
-    ci_char_clk         : in  std_logic;
-    ci_frame_clk        : in  std_logic;
-    ci_sysref           : in  std_logic;
-    ci_reset            : in  std_logic;
-    ci_request_sync     : in  std_logic;
-    co_nsynced          : out std_logic;
-    co_error            : out std_logic;
-    di_data : in  lane_input_array(0 to LANES - 1);
-    do_samples          : out simple_samples_array(0 to LINKS - 1)(0 to CONFIG(0).M - 1, 0 to CONFIG(0).CS - 1);
-    co_frame_state      : out frame_state_array(0 to LINKS - 1);
-    co_correct_data     : out std_logic);
+    ci_device_clk   : in  std_logic;
+    ci_char_clk     : in  std_logic;
+    ci_frame_clk    : in  std_logic;
+    ci_sysref       : in  std_logic;
+    ci_reset        : in  std_logic;
+    ci_request_sync : in  std_logic;
+    co_nsynced      : out std_logic;
+    co_error        : out std_logic;
+    di_data         : in  lane_input_array(0 to LANES - 1);
+    do_samples      : out samples_array(0 to CONVERTERS - 1);
+    do_ctrl_bits    : out ctrl_bits_array(0 to CONVERTERS - 1);
+    co_frame_state  : out frame_state_array(0 to LINKS - 1);
+    co_correct_data : out std_logic);
 
 end entity jesd204b_multipoint_link_rx;
 
@@ -118,10 +119,10 @@ begin  -- architecture a1
   links_rx : for i in 0 to LINKS - 1 generate
     link : entity work.jesd204b_link_rx
       generic map (
-        K_CHAR       => K_CHAR,
-        R_CHAR       => R_CHAR,
-        A_CHAR       => A_CHAR,
-        Q_CHAR       => Q_CHAR,
+        K_CHAR            => K_CHAR,
+        R_CHAR            => R_CHAR,
+        A_CHAR            => A_CHAR,
+        Q_CHAR            => Q_CHAR,
         ERROR_CONFIG      => ERROR_CONFIG,
         ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
         RX_BUFFER_DELAY   => RX_BUFFER_DELAY,
@@ -143,17 +144,18 @@ begin  -- architecture a1
         Nn                => CONFIG(i).Nn,
         ADJDIR            => CONFIG(i).ADJDIR)
     port map (
-      ci_char_clk         => ci_char_clk,
-      ci_frame_clk        => ci_frame_clk,
-      ci_multiframe_clk   => multiframe_clk,
-      ci_reset            => ci_reset,
-      ci_request_sync     => ci_request_sync,
-      co_nsynced          => links_nsynced(i),
-      co_error            => links_error(i),
-      di_data => di_data(sumCummulativeLanes(i) to sumCummulativeLanes(i) + CONFIG(i).L - 1),
-      do_samples          => do_samples(i),  -- do_samples(sumCummulativeConverters(i) to sumCummulativeConverters(i) + CONFIG(i).M - 1),
-      co_frame_state      => co_frame_state(i),
-      co_correct_data     => links_correct_data(i));
+      ci_char_clk       => ci_char_clk,
+      ci_frame_clk      => ci_frame_clk,
+      ci_multiframe_clk => multiframe_clk,
+      ci_reset          => ci_reset,
+      ci_request_sync   => ci_request_sync,
+      co_nsynced        => links_nsynced(i),
+      co_error          => links_error(i),
+      di_data           => di_data(sumCummulativeLanes(i) to sumCummulativeLanes(i) + CONFIG(i).L - 1),
+      do_ctrl_bits      => do_ctrl_bits(sumCummulativeConverters(i) to sumCummulativeConverters(i) + CONFIG(i).M - 1),
+      do_samples        => do_samples(sumCummulativeConverters(i) to sumCummulativeConverters(i) + CONFIG(i).M - 1),
+      co_frame_state    => co_frame_state(i),
+      co_correct_data   => links_correct_data(i));
   end generate links_rx;
 
 end architecture a1;

@@ -5,12 +5,6 @@ use work.data_link_pkg.all;
 -- Package for transport layer types
 package transport_pkg is
 
-  -- Output sample with control bits
-  type sample is record
-    data      : std_logic_vector;
-    ctrl_bits : std_logic_vector;
-  end record sample;
-
   type frame_state is record           -- An errors passed from data_link to transport
     user_data            : std_logic;   -- All characters are user_data
     invalid_characters   : std_logic;   -- Any of the charachers should not be
@@ -28,13 +22,12 @@ package transport_pkg is
                                         -- instead of new frame
   end record frame_state;
 
+  type ctrl_bits_array is array (natural range <>, natural range <>) of std_logic_vector;
+  type samples_array is array (natural range <>, natural range <>) of std_logic_vector;
+
   type frame_state_array is array (natural range <>) of frame_state;
 
   -- Array of frame characters (characters in one frame)
   type lane_character_array is array (natural range <>) of std_logic_vector;
-
-  -- Array of samples in one frame by converter and by sample (used with oversampling)
-  type samples_array is array (natural range <>, natural range <>) of sample;
-  type simple_samples_array is array (natural range <>) of samples_array;
 
 end package transport_pkg;

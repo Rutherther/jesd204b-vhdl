@@ -25,8 +25,9 @@ architecture a1 of transport_layer_multi_fc_tb is
   end record test_vector;
 
   type result_vector is record
-    do_samples_data : samples_array (0 to M - 1, 0 to S - 1)(data(M - 1 downto 0), ctrl_bits(CONTROL_SIZE - 1 downto 0));
-    co_frame_state : frame_state;
+    do_samples_data   : samples_array (0 to M - 1, 0 to S - 1);
+    do_ctrl_bits_data : ctrl_bits_array (0 to M - 1, 0 to S - 1);
+    co_frame_state    : frame_state;
   end record result_vector;
 
   type test_vector_array is array (natural range<>) of test_vector;
@@ -44,28 +45,46 @@ architecture a1 of transport_layer_multi_fc_tb is
   (
     (
       (
-        (("0001", "01"), ("0101", "01")),
-        (("0010", "10"), ("0110", "10")),
-        (("0011", "11"), ("0111", "11")),
-        (("0100", "00"), ("1000", "00"))
+        ("0001", "0101"),
+        ("0010", "0110"),
+        ("0011", "0111"),
+        ("0100", "1000")
+      ),
+      (
+        ("01", "01"),
+        ("10", "10"),
+        ("11", "11"),
+        ("00", "00")
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
     ),
     (
       (
-        (("0011", "00"), ("1111", "10")),
-        (("1100", "11"), ("0101", "01")),
-        (("0000", "00"), ("1010", "10")),
-        (("1111", "11"), ("0000", "01"))
+        ("0011", "1111"),
+        ("1100", "0101"),
+        ("0000", "1010"),
+        ("1111", "0000")
+      ),
+      (
+        ("00", "10"),
+        ("11", "01"),
+        ("00", "10"),
+        ("11", "01")
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
     ),
     (
       (
-        (("0001", "01"), ("0101", "01")),
-        (("0010", "10"), ("0110", "10")),
-        (("0011", "11"), ("0111", "11")),
-        (("0100", "00"), ("1000", "00"))
+        ("0001", "0101"),
+        ("0010", "0110"),
+        ("0011", "0111"),
+        ("0100", "1000")
+      ),
+      (
+        ("01", "01"),
+        ("10", "10"),
+        ("11", "11"),
+        ("00", "00")
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
     )
@@ -77,9 +96,8 @@ architecture a1 of transport_layer_multi_fc_tb is
   signal di_lanes_data : lane_character_array (0 to L - 1)(F*8-1 downto 0);
   signal ci_frame_states : frame_state_array (0 to L - 1);
 
-  signal do_samples_data : samples_array
-    (0 to M - 1, 0 to S - 1)
-    (data(N - 1 downto 0), ctrl_bits(CONTROL_SIZE - 1 downto 0));
+  signal do_samples     : samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+  signal do_ctrl_bits   : ctrl_bits_array(0 to M - 1, 0 to S - 1)(CONTROL_SIZE - 1 downto 0);
   signal co_frame_state : frame_state;
 
   signal test_data_index : integer := 0;
@@ -100,8 +118,9 @@ begin  -- architecture a1
       ci_frame_clk    => ci_frame_clk,
       di_lanes_data   => di_lanes_data,
       ci_frame_states => ci_frame_states,
-      co_frame_state => co_frame_state,
-      do_samples_data => do_samples_data);
+      co_frame_state  => co_frame_state,
+      do_ctrl_bits    => do_ctrl_bits,
+      do_samples      => do_samples);
 
   ci_frame_clk <= not ci_frame_clk after CLK_PERIOD/2;
   ci_reset <= '1' after CLK_PERIOD*2;
@@ -126,8 +145,8 @@ begin  -- architecture a1
           assert co_frame_state = result_vectors(prev_test_vec.expected_result).co_frame_state report "The frame state does not match, index: " & integer'image(prev_test_vec.expected_result) severity error;
           for ci in 0 to M - 1 loop
             for si in 0 to S - 1 loop
-              assert do_samples_data(ci, si).data = result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si).data report "The samples data do not match, expected: " & vec2str(result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si).data) & ", got: " & vec2str(dummy) & ", index: " & integer'image(i-1) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
-              assert do_samples_data(ci, si).ctrl_bits = result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si).ctrl_bits report "The samples control bits do not match, index: " & integer'image(prev_test_vec.expected_result) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
+              assert do_samples(ci, si) = result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si) report "The samples data do not match, expected: " & vec2str(result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si)) & ", got: " & vec2str(dummy) & ", index: " & integer'image(i-1) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
+              assert do_ctrl_bits(ci, si) = result_vectors(prev_test_vec.expected_result).do_ctrl_bits_data(ci, si) report "The samples control bits do not match, index: " & integer'image(prev_test_vec.expected_result) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
             end loop;  -- s
           end loop;  -- c
         end if;

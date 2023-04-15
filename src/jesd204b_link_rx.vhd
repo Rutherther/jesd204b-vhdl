@@ -57,11 +57,12 @@ entity jesd204b_link_rx is
     co_nsynced : out std_logic;  -- Whether receiver is synced (active low)
     co_error   : out std_logic;
 
-    di_data : in  lane_input_array(0 to L-1);  -- Data from transceivers
-    do_samples          : out samples_array(0 to M - 1, 0 to S - 1);
-    co_frame_state      : out frame_state;  -- Output samples
-    co_correct_data     : out std_logic);  -- Whether samples are correct user
-                                           -- data
+    di_data         : in  lane_input_array(0 to L-1);  -- Data from transceivers
+    do_samples      : out samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+    do_ctrl_bits    : out ctrl_bits_array(0 to M - 1, 0 to S - 1)(CS - 1 downto 0);
+    co_frame_state  : out frame_state;  -- Output samples
+    co_correct_data : out std_logic);   -- Whether samples are correct user
+                                        -- data
 end entity jesd204b_link_rx;
 
 architecture a1 of jesd204b_link_rx is
@@ -244,6 +245,7 @@ begin  -- architecture a1
       di_lanes_data   => transport_chars_array,
       ci_frame_states => transport_frame_state_array,
       co_frame_state  => co_frame_state,
-      do_samples_data => do_samples);
+      do_ctrl_bits    => do_ctrl_bits,
+      do_samples      => do_samples);
 
 end architecture a1;

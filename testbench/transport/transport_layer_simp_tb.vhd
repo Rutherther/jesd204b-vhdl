@@ -13,21 +13,23 @@ architecture a1 of transport_layer_simp_tb is
   constant S            : integer := 1;  -- Count of samples
   constant L            : integer := 1;  -- Count of lanes
   constant F            : integer := 4;  -- Count of octets in a frame per lane
-  constant CF            : integer := 0;  -- Count of control word bits
+  constant CF            : integer := 0;  -- Count of control words
   constant N : integer := 4;            -- Sample size
   constant Nn : integer := 8;
   constant CLK_PERIOD : time := 1 ns;
 
-  constant DUMMY_S : sample := ("0000", "0");
+  constant DUMMY_S : std_logic_vector(N - 1 downto 0)            := "0000";
+  constant DUMMY_C : std_logic_vector(CONTROL_SIZE - 1 downto 0) := "0";
   type test_vector is record
-    di_lanes_data : lane_character_array (0 to L - 1) (F*8-1 downto 0);
+    di_lanes_data   : lane_character_array (0 to L - 1) (F*8-1 downto 0);
     ci_frame_states : frame_state_array (0 to L - 1);
     expected_result : integer;
   end record test_vector;
 
   type result_vector is record
-    do_samples_data : samples_array (0 to M - 1, 0 to S - 1)(data(M - 1 downto 0), ctrl_bits(CONTROL_SIZE - 1 downto 0));
-    co_frame_state : frame_state;
+    do_samples_data   : samples_array (0 to M - 1, 0 to S - 1);
+    do_ctrl_bits_data : ctrl_bits_array (0 to M - 1, 0 to S - 1);
+    co_frame_state    : frame_state;
   end record result_vector;
 
   constant dummy_frame_state : frame_state := ('0', '0', '0', '0', '0', '0', '0', '0');
@@ -49,37 +51,61 @@ architecture a1 of transport_layer_simp_tb is
   (
     (
       (
-        (("1011", "1"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("0001", "1"), others => DUMMY_S),
-        (("0100", "0"), others => DUMMY_S)
+        ("1011", others => DUMMY_S),
+        ("1110", others => DUMMY_S),
+        ("0001", others => DUMMY_S),
+        ("0100", others => DUMMY_S)
+      ),
+      (
+        ("1", others => DUMMY_C),
+        ("0", others => DUMMY_C),
+        ("1", others => DUMMY_C),
+        ("0", others => DUMMY_C)
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
     ),
     (
       (
-        (("0001", "1"), others => DUMMY_S),
-        (("0001", "1"), others => DUMMY_S),
-        (("0001", "1"), others => DUMMY_S),
-        (("0001", "1"), others => DUMMY_S)
+        ("0001", others => DUMMY_S),
+        ("0001", others => DUMMY_S),
+        ("0001", others => DUMMY_S),
+        ("0001", others => DUMMY_S)
+      ),
+      (
+        ("1", others => DUMMY_C),
+        ("1", others => DUMMY_C),
+        ("1", others => DUMMY_C),
+        ("1", others => DUMMY_C)
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
     ),
     (
       (
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S)
+        ("1110", others => DUMMY_S),
+        ("1110", others => DUMMY_S),
+        ("1110", others => DUMMY_S),
+        ("1110", others => DUMMY_S)
+      ),
+      (
+        ("0", others => DUMMY_C),
+        ("0", others => DUMMY_C),
+        ("0", others => DUMMY_C),
+        ("0", others => DUMMY_C)
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
     ),
     (
       (
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S)
+        ("1110", others => DUMMY_S),
+        ("1110", others => DUMMY_S),
+        ("1110", others => DUMMY_S),
+        ("1110", others => DUMMY_S)
+      ),
+      (
+        ("0", others => DUMMY_C),
+        ("0", others => DUMMY_C),
+        ("0", others => DUMMY_C),
+        ("0", others => DUMMY_C)
       ),
       ('1', '1', '0', '0', '0', '1', '0', '1')
     )
@@ -91,9 +117,8 @@ architecture a1 of transport_layer_simp_tb is
   signal di_lanes_data : lane_character_array (0 to L - 1)(F*8-1 downto 0);
   signal ci_frame_states : frame_state_array (0 to L - 1);
 
-  signal do_samples_data : samples_array
-    (0 to M - 1, 0 to S - 1)
-    (data(N - 1 downto 0), ctrl_bits(CONTROL_SIZE - 1 downto 0));
+  signal do_samples     : samples_array(0 to M - 1, 0 to S - 1)(N - 1 downto 0);
+  signal do_ctrl_bits   : ctrl_bits_array(0 to M - 1, 0 to S - 1)(CONTROL_SIZE - 1 downto 0);
   signal co_frame_state : frame_state;
 
   signal test_data_index : integer := 0;
@@ -113,12 +138,12 @@ begin  -- architecture a1
       ci_frame_clk    => ci_frame_clk,
       di_lanes_data   => di_lanes_data,
       ci_frame_states => ci_frame_states,
-      co_frame_state => co_frame_state,
-      do_samples_data => do_samples_data);
+      co_frame_state  => co_frame_state,
+      do_ctrl_bits    => do_ctrl_bits,
+      do_samples      => do_samples);
 
   ci_frame_clk <= not ci_frame_clk after CLK_PERIOD/2;
   ci_reset <= '1' after CLK_PERIOD*2;
-
 
   test: process is
     variable test_vec : test_vector;
@@ -140,8 +165,8 @@ begin  -- architecture a1
           assert co_frame_state = result_vectors(prev_test_vec.expected_result).co_frame_state report "The frame state does not match, index: " & integer'image(prev_test_vec.expected_result) severity error;
           for ci in 0 to M - 1 loop
             for si in 0 to S - 1 loop
-              assert do_samples_data(ci, si).data = result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si).data report "The samples data do not match, expected: " & vec2str(result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si).data) & ", got: " & vec2str(dummy) & ", index: " & integer'image(i-1) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
-              assert do_samples_data(ci, si).ctrl_bits = result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si).ctrl_bits report "The samples control bits do not match, index: " & integer'image(prev_test_vec.expected_result) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
+              assert do_samples(ci, si) = result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si) report "The samples data do not match, expected: " & vec2str(result_vectors(prev_test_vec.expected_result).do_samples_data(ci, si)) & ", got: " & vec2str(dummy) & ", index: " & integer'image(i-1) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
+              assert do_ctrl_bits(ci, si) = result_vectors(prev_test_vec.expected_result).do_ctrl_bits_data(ci, si) report "The samples control bits do not match, index: " & integer'image(prev_test_vec.expected_result) & ", ci: " & integer'image(ci) & ", si: " & integer'image(si) severity error;
             end loop;  -- s
           end loop;  -- c
         end if;

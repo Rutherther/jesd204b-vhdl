@@ -77,8 +77,8 @@ architecture a1 of jesd204b_rx_kchars_tb is
 
   signal co_nsynced : std_logic;
   signal co_error : std_logic;
-  signal do_samples : samples_array (M-1 downto 0, S-1 downto 0)
-    (data(N - 1 downto 0), ctrl_bits(CS - 1 downto 0));
+  signal do_samples : samples_array (M-1 downto 0, S-1 downto 0)(N-1 downto 0);
+  signal do_ctrl_bits : ctrl_bits_array (M-1 downto 0, S-1 downto 0)(CS-1 downto 0);
   signal co_correct_data : std_logic;
 
 begin  -- architecture a1
@@ -94,16 +94,18 @@ begin  -- architecture a1
       N  => N,
       Nn => Nn)
     port map (
-      ci_char_clk         => char_clk,
-      ci_frame_clk        => frame_clk,
-      ci_multiframe_clk   => '0',
-      ci_reset            => reset,
-      ci_request_sync     => '0',
-      di_data => di_data,
-      co_nsynced          => co_nsynced,
-      co_error            => co_error,
-      do_samples          => do_samples,
-      co_correct_data     => co_correct_data);
+      ci_char_clk       => char_clk,
+      ci_frame_clk      => frame_clk,
+      ci_multiframe_clk => '0',
+      ci_reset          => reset,
+      ci_request_sync   => '0',
+      di_data           => di_data,
+      co_nsynced        => co_nsynced,
+      co_error          => co_error,
+      do_samples        => do_samples,
+      do_ctrl_bits      => do_ctrl_bits,
+      co_correct_data   => co_correct_data);
+
 
   char_clk <= not char_clk after char_clk_period/2;
   frame_clk <= not frame_clk after frame_clk_period/2;
