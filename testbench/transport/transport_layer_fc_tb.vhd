@@ -4,19 +4,19 @@ use work.data_link_pkg.all;
 use work.transport_pkg.all;
 use work.testing_functions.all;
 
-entity octets_to_samples_simp_tb is
-end entity octets_to_samples_simp_tb;
+entity transport_layer_fc_tb is
+end entity transport_layer_fc_tb;
 
-architecture a1 of octets_to_samples_simp_tb is
+architecture a1 of transport_layer_fc_tb is
   constant CONTROL_SIZE : integer := 1;  -- Size in bits of the control bits
   constant M            : integer := 4;  -- Count of converters
   constant S            : integer := 1;  -- Count of samples
   constant L            : integer := 1;  -- Count of lanes
-  constant F            : integer := 4;  -- Count of octets in a frame per lane
-  constant CF            : integer := 0;  -- Count of control word bits
-  constant N : integer := 4;            -- Sample size
-  constant Nn : integer := 8;
-  constant CLK_PERIOD : time := 1 ns;
+  constant F            : integer := 3;  -- Count of octets in a frame per lane
+  constant CF           : integer := 1;  -- Count of control word bits
+  constant N            : integer := 4;  -- Sample size
+  constant Nn           : integer := 4;
+  constant CLK_PERIOD   : time    := 5 ns;
 
   constant DUMMY_S : sample := ("0000", "0");
   type test_vector is record
@@ -35,13 +35,11 @@ architecture a1 of octets_to_samples_simp_tb is
   type test_vector_array is array (natural range<>) of test_vector;
   constant test_vectors : test_vector_array :=
   (
-    (("00000000000000000000000000000000", others => (others => '0')), (('0', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state), -1),
-    (("10111000111000000001100001000000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state), -1),
-    (("00011000000110000001100000011000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state), 0),
-    (("11100000111000001110000011100000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state), 1),
-    (("00000000000000000000000000000000", others => (others => '0')), (('1', '1', '0', '0', '0', '1', '0', '0'), others => dummy_frame_state), 2),
-    (("11100000111000001110000011100000", others => (others => '0')), (('1', '1', '0', '0', '0', '1', '0', '0'), others => dummy_frame_state), 3),
-    (("00000000000000000000000000000000", others => (others => '0')), (('1', '1', '0', '0', '0', '1', '0', '0'), others => dummy_frame_state), -1)
+    (("000000000000000000000000", others => (others => '0')), (('0', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state), -1),
+    (("101111100001010010100000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state), -1),
+    (("000100010001000111110000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state),  0),
+    (("111011101110111000000000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state),  1),
+    (("000000001110000011100000", others => (others => '0')), (('1', '0', '0', '0', '0', '0', '0', '0'), others => dummy_frame_state),  2)
   );
 
   type result_vector_array is array (natural range<>) of result_vector;
@@ -73,15 +71,6 @@ architecture a1 of octets_to_samples_simp_tb is
         (("1110", "0"), others => DUMMY_S)
       ),
       ('1', '0', '0', '0', '0', '0', '0', '0')
-    ),
-    (
-      (
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S),
-        (("1110", "0"), others => DUMMY_S)
-      ),
-      ('1', '1', '0', '0', '0', '1', '0', '1')
     )
   );
 
@@ -98,7 +87,7 @@ architecture a1 of octets_to_samples_simp_tb is
 
   signal test_data_index : integer := 0;
 begin  -- architecture a1
-  uut : entity work.octets_to_samples
+  uut : entity work.transport_layer
     generic map (
       CS => CONTROL_SIZE,
       M  => M,
@@ -118,7 +107,6 @@ begin  -- architecture a1
 
   ci_frame_clk <= not ci_frame_clk after CLK_PERIOD/2;
   ci_reset <= '1' after CLK_PERIOD*2;
-
 
   test: process is
     variable test_vec : test_vector;
