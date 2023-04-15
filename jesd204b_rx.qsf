@@ -39,7 +39,7 @@
 
 set_global_assignment -name FAMILY "Cyclone V"
 set_global_assignment -name DEVICE 5CGXFC7D6F31I7
-set_global_assignment -name TOP_LEVEL_ENTITY frame_alignment
+set_global_assignment -name TOP_LEVEL_ENTITY jesd204b_link_rx
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 21.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "18:31:58  DECEMBER 04, 2022"
 set_global_assignment -name LAST_QUARTUS_VERSION "21.1.0 Lite Edition"
@@ -84,27 +84,6 @@ set_global_assignment -name EDA_TEST_BENCH_NAME frame_alignment_tb -section_id e
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id frame_alignment_tb
 set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "10 us" -section_id frame_alignment_tb
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME frame_alignment_tb -section_id frame_alignment_tb
-set_global_assignment -name VHDL_FILE testbench/data_link/an8b10bdecoder_tb.vhd
-set_global_assignment -name VHDL_FILE src/data_link/an8b10b_decoder.vhd
-set_global_assignment -name VHDL_FILE testbench/data_link/link_controller_tb.vhd
-set_global_assignment -name VHDL_FILE testbench/data_link/lane_alignment_tb.vhd
-set_global_assignment -name VHDL_FILE testbench/data_link/ilas_parser_tb.vhd
-set_global_assignment -name VHDL_FILE testbench/data_link/functions.vhd
-set_global_assignment -name VHDL_FILE testbench/data_link/frame_alignment_tb.vhd
-set_global_assignment -name VHDL_FILE testbench/data_link/char_alignment_tb.vhd
-set_global_assignment -name VHDL_FILE src/data_link/link_controller.vhd
-set_global_assignment -name VHDL_FILE src/data_link/lane_alignment.vhd
-set_global_assignment -name VHDL_FILE src/data_link/ilas_parser.vhd
-set_global_assignment -name VHDL_FILE src/data_link/frame_alignment.vhd
-set_global_assignment -name VHDL_FILE src/data_link/error_handler.vhd
-set_global_assignment -name VHDL_FILE src/data_link/data_link_pkg.vhd
-set_global_assignment -name VHDL_FILE src/data_link/data_link_layer.vhd
-set_global_assignment -name VHDL_FILE src/data_link/char_alignment.vhd
-set_global_assignment -name VHDL_FILE src/descrambler.vhd
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name EDA_TEST_BENCH_FILE testbench/data_link/functions.vhd -section_id char_alignment
 set_global_assignment -name EDA_TEST_BENCH_FILE testbench/data_link/char_alignment_tb.vhd -section_id char_alignment
 set_global_assignment -name EDA_TEST_BENCH_FILE src/data_link/ilas_parser.vhd -section_id ilas_parser_tb
@@ -123,3 +102,32 @@ set_global_assignment -name EDA_TEST_BENCH_FILE testbench/data_link/lane_alignme
 set_global_assignment -name EDA_TEST_BENCH_FILE src/data_link/frame_alignment.vhd -section_id frame_alignment_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE testbench/data_link/functions.vhd -section_id frame_alignment_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE testbench/data_link/frame_alignment_tb.vhd -section_id frame_alignment_tb
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name VHDL_FILE src/synced_combination.vhd
+set_global_assignment -name VHDL_FILE src/lmfc_generation.vhd
+set_global_assignment -name VHDL_FILE src/lmfc_counter.vhd
+set_global_assignment -name VHDL_FILE src/transport/transport_layer.vhd
+set_global_assignment -name VHDL_FILE src/jesd204b_pkg.vhd
+set_global_assignment -name VHDL_FILE src/jesd204b_link_rx.vhd
+set_global_assignment -name VHDL_FILE src/transport/transport_pkg.vhd
+set_global_assignment -name VHDL_FILE src/data_link/ring_buffer.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/an8b10bdecoder_tb.vhd
+set_global_assignment -name VHDL_FILE src/data_link/an8b10b_decoder.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/link_controller_tb.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/lane_alignment_tb.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/ilas_parser_tb.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/functions.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/frame_alignment_tb.vhd
+set_global_assignment -name VHDL_FILE testbench/data_link/char_alignment_tb.vhd
+set_global_assignment -name VHDL_FILE src/data_link/link_controller.vhd
+set_global_assignment -name VHDL_FILE src/data_link/lane_alignment.vhd
+set_global_assignment -name VHDL_FILE src/data_link/ilas_parser.vhd
+set_global_assignment -name VHDL_FILE src/data_link/frame_alignment.vhd
+set_global_assignment -name VHDL_FILE src/data_link/error_handler.vhd
+set_global_assignment -name VHDL_FILE src/data_link/data_link_pkg.vhd
+set_global_assignment -name VHDL_FILE src/data_link/data_link_layer.vhd
+set_global_assignment -name VHDL_FILE src/data_link/char_alignment.vhd
+set_global_assignment -name VHDL_FILE src/descrambler.vhd
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
