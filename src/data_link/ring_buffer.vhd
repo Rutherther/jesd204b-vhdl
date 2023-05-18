@@ -27,6 +27,7 @@ entity ring_buffer is
 end entity ring_buffer;
 
 architecture a1 of ring_buffer is
+	 constant BIT_BUFFER_SIZE : integer := CHARACTER_SIZE*BUFFER_SIZE-1;
     signal buff : std_logic_vector(CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
     signal buff_triple : std_logic_vector(3*CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
     signal next_read : std_logic_vector(CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
@@ -41,8 +42,8 @@ begin  -- architecture a1
     -- inputs : ci_clk, ci_reset
     -- outputs: read_position, write_position, buff
     read: process (ci_clk, ci_reset) is
-        variable read_from_position : integer;
-        variable read_to_position : integer;
+        variable read_from_position : integer range 0 to BIT_BUFFER_SIZE-1;
+        variable read_to_position : integer range 0 to BIT_BUFFER_SIZE-1;
     begin  -- process read
         if ci_reset = '0' then          -- asynchronous reset (active low)
             buff <= (others => '0');
@@ -58,10 +59,11 @@ begin  -- architecture a1
 
                 read_from_position := (CHARACTER_SIZE*BUFFER_SIZE - 1 - (read_position + ci_adjust_position)*CHARACTER_SIZE) mod (CHARACTER_SIZE*BUFFER_SIZE);
                 read_to_position := (CHARACTER_SIZE*BUFFER_SIZE - (read_position + ci_adjust_position + READ_SIZE)*CHARACTER_SIZE) mod (CHARACTER_SIZE*BUFFER_SIZE);
-                if read_from_position >= read_to_position then
-                    co_read <= buff(read_from_position downto read_to_position);
+					 if read_from_position >= read_to_position then
+					     co_read(CHARACTER_SIZE*READ_SIZE - 1 downto 0) <= buff(read_from_position downto read_from_position + 1 - READ_SIZE*CHARACTER_SIZE);
                 else
-                    co_read <= buff(read_from_position downto 0) & buff(CHARACTER_SIZE*BUFFER_SIZE - 1 downto read_to_position);
+						  co_read(CHARACTER_SIZE*READ_SIZE - 1 downto CHARACTER_SIZE*READ_SIZE - 1 - read_from_position) <= buff(read_from_position downto 0);
+						  co_read(CHARACTER_SIZE*BUFFER_SIZE - 1 - read_to_position downto 0) <= buff(CHARACTER_SIZE*BUFFER_SIZE - 1 downto read_to_position);
                 end if;
             else
                 reg_size <= reg_size + 1;
