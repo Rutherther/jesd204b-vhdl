@@ -27,7 +27,7 @@ entity ring_buffer is
 end entity ring_buffer;
 
 architecture a1 of ring_buffer is
-	 constant BIT_BUFFER_SIZE : integer := CHARACTER_SIZE*BUFFER_SIZE-1;
+	 constant BIT_BUFFER_SIZE : integer := CHARACTER_SIZE*BUFFER_SIZE;
     signal buff : std_logic_vector(CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
     signal next_read : std_logic_vector(CHARACTER_SIZE*BUFFER_SIZE-1 downto 0);
     signal read_position : integer := 0;
