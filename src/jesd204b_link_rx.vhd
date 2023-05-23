@@ -22,6 +22,8 @@ entity jesd204b_link_rx is
                                         -- alignment character
     Q_CHAR       : std_logic_vector(7 downto 0) := "10011100";  -- ILAS 2nd
                                         -- frame 2nd character
+    REVERSE_LANE_INPUT : std_logic := '0'; -- Whether to reverse data going in
+                                           -- the lane
     ADJCNT            : integer range 0 to 15        := 0;
     ADJDIR            : std_logic                    := '0';
     BID               : integer range 0 to 15        := 0;
@@ -194,6 +196,7 @@ begin  -- architecture a1
   data_links : for i in 0 to L-1 generate
     data_link_layer : entity work.data_link_layer
       generic map (
+        REVERSE => REVERSE_LANE_INPUT,
         ALIGN_BUFFER_SIZE => ALIGN_BUFFER_SIZE,
         K_CHAR       => K_CHAR,
         R_CHAR       => R_CHAR,

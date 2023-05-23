@@ -17,7 +17,10 @@ use ieee.std_logic_1164.all;
 entity char_alignment is
 
   generic (
-    K_CHAR : std_logic_vector(9 downto 0) := "0011111010"  -- The character used for synchronization (positive RD)
+    K_CHAR : std_logic_vector(9 downto 0) := "0011111010";  -- The character used for synchronization (positive RD)
+    REVERSE : std_logic := '1'  -- Whether to expect the K character in
+                                -- reverse, most probably will be reversed in a
+                                -- real FPGA situation
     );
   port (
     ci_char_clk: in std_logic;          -- The character clock
@@ -30,6 +33,7 @@ entity char_alignment is
 end entity char_alignment;
 
 architecture a1 of char_alignment is
+  constant K_CHAR_REVERSED : std_logic_vector(9 downto 0) := K_CHAR(0) & K_CHAR(1) & K_CHAR(2) & K_CHAR(3) & K_CHAR(4) & K_CHAR(5) & K_CHAR(6) & K_CHAR(7) & K_CHAR(8) & K_CHAR(9);
   signal next_cache_10b : std_logic_vector(19 downto 0) := (others => '0');  -- The next value of cache_10b
   signal next_do_10b : std_logic_vector(9 downto 0) := (others => '0');  -- The next value of do_10b
   signal next_co_aligned : std_logic := '0';
@@ -79,9 +83,16 @@ begin  -- architecture a1
       if ci_synced = '0' then
         -- Try to find /K/ (K_CHAR) in either RD (either K_CHAR or not K_CHAR).
         for i in 0 to 9 loop
-          if reg_cache_10b(i+9 downto i) = K_CHAR or reg_cache_10b(i+9 downto i) = not K_CHAR then
-            reg_found_sync_char <= '1';
-            reg_alignment_index <= i;
+          if REVERSE = '1' then
+            if reg_cache_10b(i+9 downto i) = K_CHAR_REVERSED or reg_cache_10b(i+9 downto i) = not K_CHAR_REVERSED then
+              reg_found_sync_char <= '1';
+              reg_alignment_index <= i;
+            end if;
+          else
+            if reg_cache_10b(i+9 downto i) = K_CHAR or reg_cache_10b(i+9 downto i) = not K_CHAR then
+              reg_found_sync_char <= '1';
+              reg_alignment_index <= i;
+            end if;
           end if;
         end loop;  -- i
       end if;

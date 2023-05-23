@@ -27,6 +27,7 @@ entity data_link_layer is
                                         -- multiframe start
     A_CHAR       : std_logic_vector(7 downto 0) := "01111100";  -- multiframe end
     Q_CHAR       : std_logic_vector(7 downto 0) := "10011100";  -- 2nd ILAS frame
+    REVERSE      : std_logic := '0'; -- Whether to expect 10b characters reversed
                                         -- 2nd character
     ALIGN_BUFFER_SIZE : integer                      := 255;  -- Size of a
                                                               -- buffer that is
@@ -145,6 +146,9 @@ begin  -- architecture a1
 
   -- char alignment
   char_alignment: entity work.char_alignment
+    generic map (
+      REVERSE => REVERSE
+    )
     port map (
       ci_char_clk => ci_char_clk,
       ci_reset    => ci_reset,
@@ -154,6 +158,9 @@ begin  -- architecture a1
 
   -- 8b10b decoder
   an8b10b_decoder: entity work.an8b10b_decoder
+    generic map (
+      REVERSE => REVERSE
+    )
     port map (
       ci_char_clk => ci_char_clk,
       ci_reset    => ci_reset,

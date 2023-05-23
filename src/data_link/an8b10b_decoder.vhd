@@ -16,6 +16,9 @@ use ieee.numeric_std.all;
 use work.data_link_pkg.all;
 
 entity an8b10b_decoder is
+  generic (
+    REVERSE : std_logic := '1' -- Whether to expect characters reversed
+  );
   port (
     ci_char_clk : in  std_logic;        -- The character clock
     ci_reset    : in  std_logic;        -- The reset (asynchronous active low)
@@ -76,6 +79,10 @@ architecture a1 of an8b10b_decoder is
   signal data_6b_int : integer range 0 to 63 := 0;
   signal data_4b_int_neg : integer range 0 to 15 := 0;
   signal data_6b_int_neg : integer range 0 to 63 := 0;
+
+  signal di_10b_reversed : std_logic_vector(9 downto 0);
+
+  signal di_10b_actual : std_logic_vector(9 downto 0);
 
   function IsMissingCharacter(
     cdata_4b_int : integer range 0 to 15;
@@ -171,6 +178,8 @@ architecture a1 of an8b10b_decoder is
   end function IsDisparityCorrect;
 
 begin  -- architecture a1
+  di_10b_reversed <= di_10b(0) & di_10b(1) & di_10b(2) & di_10b(3) & di_10b(4) & di_10b(5) & di_10b(6) & di_10b(7) & di_10b(8) & di_10b(9);
+
   -- purpose: Set next states
   -- type   : sequential
   -- inputs : ci_char_clk, ci_reset
@@ -196,8 +205,15 @@ begin  -- architecture a1
       reg_rd <= next_rd;
     end if;
   end process set_next;
-  data_4b <= di_10b(3 downto 0);
-  data_6b <= di_10b(9 downto 4);
+
+  WITHOUT_REVERSE: if REVERSE = '0' generate
+    di_10b_actual <= di_10b;
+  end generate;
+  REVERSED: if REVERSE = '1' generate
+    di_10b_actual <= di_10b_reversed;
+  end generate;
+  data_4b <= di_10b_actual(3 downto 0);
+  data_6b <= di_10b_actual(9 downto 4);
   data_4b_int <= to_integer(unsigned(data_4b));
   data_6b_int <= to_integer(unsigned(data_6b));
   data_4b_int_neg <= to_integer(unsigned(not data_4b));
@@ -208,11 +224,11 @@ begin  -- architecture a1
   -- will output 1 ... it's basically an odd parity)
   -- synchronize in case of disparity error (can be either at the beginning of
   -- communication or the last character was loaded incorrectly)
-  change_rd <= (not xor_reduce(di_10b) or next_disparity_error) and not (not xor_reduce(di_10b) and next_disparity_error);
+  change_rd <= (not xor_reduce(di_10b_actual) or next_disparity_error) and not (not xor_reduce(di_10b_actual) and next_disparity_error);
   next_rd <= (not reg_rd and change_rd) or (reg_rd and not change_rd);
 
   -- control characters
-  next_kout <= IsControlCharacter(di_10b);
+  next_kout <= IsControlCharacter(di_10b_actual);
 
   -- errors
   next_missing_error <= IsMissingCharacter(data_4b_int, data_6b_int) and not next_kout;
